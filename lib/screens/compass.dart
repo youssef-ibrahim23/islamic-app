@@ -68,7 +68,7 @@ class _CompassPageState extends State<CompassPage> {
                     // Circular compass background image
                     ClipOval(
                       child: Image.asset(
-                        'assets/compass.png',
+                        'assets/compass.jpg',
                         fit: BoxFit.cover,
                         width: isPortrait ? size.width * 0.95 : size.height * 0.95,
                         height: isPortrait ? size.width * 0.95 : size.height * 0.95,
