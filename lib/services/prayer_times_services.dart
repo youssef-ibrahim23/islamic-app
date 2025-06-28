@@ -10,94 +10,87 @@ import 'package:islamic_app/screens/location_selection_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrayerTimesService {
+  static SharedPreferences? _prefs;
 
-static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback onStateChanged) async {
-  final prefs = await SharedPreferences.getInstance();
-  String? country = prefs.getString('country');
-  String? governorate = prefs.getString('governorate');
-
-  if (country == null || governorate == null) {
-    try {
-      // 🔹 Check permission and request if needed
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception("Location services are disabled.");
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception("Location permission denied.");
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception("Location permission permanently denied.");
-      }
-
-      // 🔹 Get position
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      // 🔹 Reverse geocode to get location name
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-        
-      );
-
-      if (placemarks.isNotEmpty) {
-  Placemark place = placemarks.first;
-
-  // Raw data (likely English)
-  String rawCountry = place.country ?? "Unknown";
-  String rawGovernorate = place.administrativeArea ?? "Unknown";
-
-  // Convert English country name to Arabic (if possible)
-  String countryArabic = Locations.arabicCountryFromEnglish(rawCountry);
-
-  // Convert English governorate to Arabic if possible
-  String governorateArabic =
-      Locations.englishGovernorateToArabic(rawCountry, rawGovernorate) ??
-      rawGovernorate; // fallback to raw if no match
-
-  // Save Arabic names
-  country = countryArabic;
-  governorate = governorateArabic;
-
-  // Save to prefs
-  await prefs.setString('country', country);
-  await prefs.setString('governorate', governorate);
-
-  // Set globals
-  Globals.currentLocation = "$governorate, $country";
-  Globals.locationSelected = true;
-
-  Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Globals.coordinates;
-
-  await _initializePrayerTimes(onStateChanged);
-}
-
- else {
-        throw Exception("Failed to detect location.");
-      }
-    } catch (e) {
-      debugPrint("Location error: $e");
-
-      // If failed, go to manual selection page
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LocationSelectionPage()),
-        );
-      });
-    }
-  } else {
-    await _loadLocationAndInitialize(onStateChanged);
+  static Future<void> _ensurePrefsLoaded() async {
+    _prefs ??= await SharedPreferences.getInstance();
   }
-}
+
+  static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback onStateChanged) async {
+    await _ensurePrefsLoaded();
+
+    String? country = getLocalizedString(
+      _prefs!.getString('countryEnglish'),
+      _prefs!.getString('countryArabic'),
+    );
+    String? governorate = getLocalizedString(
+      _prefs!.getString('governorateEnglish'),
+      _prefs!.getString('governorateArabic'),
+    );
+
+    if (country == null || governorate == null) {
+      try {
+        // Check location permission
+        if (!await Geolocator.isLocationServiceEnabled()) {
+          throw Exception("Location services are disabled.");
+        }
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) throw Exception("Permission denied.");
+        }
+        if (permission == LocationPermission.deniedForever) throw Exception("Permission permanently denied.");
+
+        // Get current location
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        ).timeout(const Duration(seconds: 10));
+
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+
+        if (placemarks.isEmpty) throw Exception("Failed to detect location.");
+        Placemark place = placemarks.first;
+
+        String rawCountry = place.country ?? "Unknown";
+        String rawGovernorate = place.administrativeArea?.split(' ').first ?? "Unknown";
+
+        String countryAr = Locations.arabicCountryFromEnglish(rawCountry);
+        String governorateAr = Locations.englishGovernorateToArabic(rawCountry, rawGovernorate) ?? rawGovernorate;
+
+        // Save to SharedPreferences
+        await _prefs!.setString('countryEnglish', rawCountry);
+        await _prefs!.setString('countryArabic', countryAr);
+        await _prefs!.setString('governorateEnglish', rawGovernorate);
+        await _prefs!.setString('governorateArabic', governorateAr);
+
+        // Set globals
+        country = getLocalizedString(rawCountry, countryAr);
+        governorate = getLocalizedString(rawGovernorate, governorateAr);
+        Globals.currentLocation = "$governorate, $country";
+        Globals.locationSelected = true;
+        Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Coordinates(30.0444, 31.2357);
+
+        await _initializePrayerTimes(onStateChanged);
+      } catch (e) {
+        debugPrint("Location error: $e");
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const LocationSelectionPage()),
+            );
+          }
+        });
+      }
+    } else {
+      await _loadLocationAndInitialize(onStateChanged);
+    }
+  }
 
   static Future<void> changeLocation(BuildContext context, VoidCallback onStateChanged) async {
     final result = await Navigator.push(
@@ -113,14 +106,21 @@ static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback 
   }
 
   static Future<void> _loadLocationAndInitialize(VoidCallback onStateChanged) async {
-    final prefs = await SharedPreferences.getInstance();
-    String? country = prefs.getString('country');
-    String? governorate = prefs.getString('governorate');
+    await _ensurePrefsLoaded();
+
+    String? country = getLocalizedString(
+      _prefs!.getString('countryEnglish'),
+      _prefs!.getString('countryArabic'),
+    );
+    String? governorate = getLocalizedString(
+      _prefs!.getString('governorateEnglish'),
+      _prefs!.getString('governorateArabic'),
+    );
 
     if (country != null && governorate != null) {
       Globals.currentLocation = '$governorate, $country';
       Globals.locationSelected = true;
-      Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Globals.coordinates;
+      Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Coordinates(30.0444, 31.2357);
     }
 
     await _initializePrayerTimes(onStateChanged);
@@ -203,13 +203,15 @@ static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback 
       final diff = nextPrayerTime.difference(now);
 
       if (diff.isNegative) {
-        // Time passed; restart whole cycle
         _initializePrayerTimes(onStateChanged);
         return;
       }
 
-      Globals.timeRemaining = _formatDuration(diff);
-      onStateChanged();
+      String formatted = _formatDuration(diff);
+      if (Globals.timeRemaining != formatted) {
+        Globals.timeRemaining = formatted;
+        onStateChanged();
+      }
     });
   }
 
@@ -250,5 +252,9 @@ static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback 
     } catch (_) {
       return time24;
     }
+  }
+
+  static String? getLocalizedString(String? english, String? arabic) {
+    return Globals.languageState! ? english : arabic;
   }
 }

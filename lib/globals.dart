@@ -43,9 +43,9 @@ class Globals {
   /// User Info & Preferences
   /// ----------------------------
   static String? accountName;
-  static String currentSora = "Al-Fatiha";
-  static int surahId = 1;
-  static bool? languageState = false;
+  static String currentSora = languageState! ? "Al-Fatiha" : "الفاتحة";
+  static int? surahId;
+  static bool? languageState;
 
   /// ----------------------------
   /// Surah & Search Management

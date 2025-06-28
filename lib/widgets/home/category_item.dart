@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
-import 'package:islamic_app/widgets/app_them.dart';
 
 class CategoryItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final Widget page;
+  final Color primaryColor;
+  final Color cardColor;
+  final Color textColor;
+  final Color backgroundColor;
 
   const CategoryItem({
-    Key? key,
+    super.key,
     required this.icon,
     required this.label,
     required this.page,
-  }) : super(key: key);
+    required this.primaryColor,
+    required this.cardColor,
+    required this.textColor,
+    required this.backgroundColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +46,7 @@ class CategoryItem extends StatelessWidget {
               offset: const Offset(0, 5),
             ),
           ],
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [

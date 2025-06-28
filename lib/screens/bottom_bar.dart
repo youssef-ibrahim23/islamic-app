@@ -3,6 +3,7 @@ import 'package:islamic_app/screens/favorites.dart';
 import 'package:islamic_app/screens/home.dart';
 import 'package:islamic_app/screens/more.dart';
 import 'package:islamic_app/globals.dart';
+import 'compass.dart';
 
 class BottomBar extends StatefulWidget {
   const BottomBar({super.key});
@@ -20,6 +21,7 @@ class _BottomBarState extends State<BottomBar> {
   final List<Widget> _pages = [
     const More(),
     const HomePage(),
+    const CompassPage(),
     const FavoritesPage()
   ];
 
@@ -83,10 +85,19 @@ class _BottomBarState extends State<BottomBar> {
               ),
               _buildNavItem(
                 context,
+                icon: Icons.explore_outlined,
+                activeIcon: Icons.explore,
+                label: Globals.languageState! ? 'Compass' : 'القبلة',
+                index: 2,
+                iconSize: iconSize,
+                fontSize: labelFontSize,
+              ),
+              _buildNavItem(
+                context,
                 icon: Icons.favorite_outline,
                 activeIcon: Icons.favorite,
                 label: Globals.languageState! ? 'Favorites' : 'المفضلة',
-                index: 2,
+                index: 3,
                 iconSize: iconSize,
                 fontSize: labelFontSize,
               ),

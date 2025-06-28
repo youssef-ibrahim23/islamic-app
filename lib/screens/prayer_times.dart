@@ -1,13 +1,13 @@
-// ignore_for_file: equal_keys_in_map
+// ignore_for_file: equal_keys_in_map, use_build_context_synchronously
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/screens/bottom_bar.dart';
 import 'package:islamic_app/services/prayer_times_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
-import 'package:islamic_app/globals.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/widgets/prayers/prayer_icon.dart';
 import 'package:islamic_app/widgets/prayers/prayer_time_tile.dart';
 
@@ -25,31 +25,35 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
   void initState() {
     super.initState();
 
-    // Load prayer times and trigger rebuild when loaded
+    // Get location and prayer times
     PrayerTimesService.checkLocationAndNavigate(context, () {
       if (mounted) setState(() {});
     });
 
-    // UI refresh timer for countdown
+    // Refresh countdown UI every second
     _localTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
 
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light.copyWith(
-      statusBarColor: primaryColor,
-    ));
+    // Update status bar color
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle.light.copyWith(statusBarColor: primaryColor),
+    );
   }
 
   @override
   void dispose() {
-    Globals.timer?.cancel(); // Cancel global countdown timer
-    _localTimer.cancel();    // Cancel local UI refresh timer
+    Globals.timer?.cancel(); // Global countdown timer
+    _localTimer.cancel();    // UI refresh timer
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isEnglish = Globals.languageState!;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     if (!Globals.locationSelected) {
       return const Scaffold(
         backgroundColor: backgroundColor,
@@ -59,24 +63,26 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
       );
     }
 
-    final double screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => const BottomBar())),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const BottomBar()),
+            );
+          },
         ),
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
         title: Text(
-          Globals.languageState! ? "Prayer Times" : 'مواعيد الصلاة',
+          isEnglish ? "Prayer Times" : 'مواعيد الصلاة',
           style: GoogleFonts.getFont(
-            Globals.languageState! ? 'Roboto' : 'Tajawal',
+            isEnglish ? 'Roboto' : 'Tajawal',
             color: Colors.white,
             fontSize: screenWidth * 0.06,
             fontWeight: FontWeight.bold,
@@ -85,22 +91,21 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.location_on, color: Colors.white),
+            tooltip: isEnglish ? 'Change Location' : 'تغيير الموقع',
             onPressed: () {
               PrayerTimesService.changeLocation(context, () {
                 if (mounted) setState(() {});
               });
             },
-            tooltip:
-                Globals.languageState! ? 'Change Location' : 'تغيير الموقع',
           ),
         ],
       ),
       body: Globals.prayerTimesIsLoading
           ? const Center(child: CircularProgressIndicator(color: primaryColor))
           : Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: Image.asset("assets/background.jpg").image,
+                  image: AssetImage("assets/background.jpg"),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -117,8 +122,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -131,22 +135,18 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           if (Globals.currentLocation != null)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.location_on,
-                                    color: Colors.white70, size: 16),
+                                const Icon(Icons.location_on, color: Colors.white70, size: 16),
                                 const SizedBox(width: 4),
                                 Flexible(
                                   child: Text(
                                     Globals.currentLocation!,
                                     style: GoogleFonts.getFont(
-                                      Globals.languageState!
-                                          ? 'Roboto'
-                                          : 'Tajawal',
+                                      isEnglish ? 'Roboto' : 'Tajawal',
                                       color: Colors.white70,
                                       fontSize: screenWidth * 0.035,
                                     ),
@@ -157,11 +157,9 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                             ),
                           const SizedBox(height: 10),
                           Text(
-                            Globals.languageState!
-                                ? "Next Prayer"
-                                : "الصلاة القادمة",
+                            isEnglish ? "Next Prayer" : "الصلاة القادمة",
                             style: GoogleFonts.getFont(
-                              Globals.languageState! ? 'Roboto' : 'Tajawal',
+                              isEnglish ? 'Roboto' : 'Tajawal',
                               color: Colors.white.withOpacity(0.95),
                               fontSize: screenWidth * 0.045,
                               fontWeight: FontWeight.w600,
@@ -169,11 +167,11 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            Globals.languageState!
+                            isEnglish
                                 ? Globals.nextPrayer
-                                : Globals.nextArabicPrayer!,
+                                : Globals.nextArabicPrayer ?? Globals.nextPrayer,
                             style: GoogleFonts.getFont(
-                              Globals.languageState! ? 'Roboto' : 'Tajawal',
+                              isEnglish ? 'Roboto' : 'Tajawal',
                               color: Colors.white,
                               fontSize: screenWidth * 0.065,
                               fontWeight: FontWeight.bold,
@@ -194,11 +192,13 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                               ),
                               const SizedBox(width: 10),
                               Text(
-                                Globals.languageState!
+                                isEnglish
                                     ? "at ${PrayerTimesService.convertTo12HourFormat(Globals.nextPrayerTime)}"
-                                    : "في ${Globals.toArabicNumber(PrayerTimesService.convertTo12HourFormat(Globals.nextPrayerTime))}",
+                                    : "في ${Globals.toArabicNumber(
+                                        PrayerTimesService.convertTo12HourFormat(Globals.nextPrayerTime),
+                                      )}",
                                 style: GoogleFonts.getFont(
-                                  Globals.languageState! ? 'Roboto' : 'Tajawal',
+                                  isEnglish ? 'Roboto' : 'Tajawal',
                                   color: Colors.white70,
                                   fontSize: screenWidth * 0.045,
                                 ),
@@ -207,17 +207,15 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                           ),
                           const SizedBox(height: 20),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                             decoration: BoxDecoration(
                               color: Colors.black.withOpacity(0.25),
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: Text(
-                              Globals.languageState!
+                              isEnglish
                                   ? Globals.timeRemaining
-                                  : Globals.toArabicNumber(
-                                      Globals.timeRemaining),
+                                  : Globals.toArabicNumber(Globals.timeRemaining),
                               style: GoogleFonts.robotoMono(
                                 color: Colors.white,
                                 fontSize: screenWidth * 0.07,
@@ -237,8 +235,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       padding: const EdgeInsets.all(16.0),
                       decoration: BoxDecoration(
                         color: cardColor,
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(24)),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -250,32 +247,13 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
-                            if (Globals.prayerTimes != null) ...[
-                              PrayerTimeTileWidget(
-                                prayerName: 'Fajr',
-                                prayerTime: Globals.prayerTimes!['Fajr']!,
+                            if (Globals.prayerTimes != null)
+                              ...Globals.prayerTimes!.entries.map(
+                                (entry) => PrayerTimeTileWidget(
+                                  prayerName: entry.key,
+                                  prayerTime: entry.value,
+                                ),
                               ),
-                              PrayerTimeTileWidget(
-                                prayerName: 'Sunrise',
-                                prayerTime: Globals.prayerTimes!['Sunrise']!,
-                              ),
-                              PrayerTimeTileWidget(
-                                prayerName: 'Dhuhr',
-                                prayerTime: Globals.prayerTimes!['Dhuhr']!,
-                              ),
-                              PrayerTimeTileWidget(
-                                prayerName: 'Asr',
-                                prayerTime: Globals.prayerTimes!['Asr']!,
-                              ),
-                              PrayerTimeTileWidget(
-                                prayerName: 'Maghrib',
-                                prayerTime: Globals.prayerTimes!['Maghrib']!,
-                              ),
-                              PrayerTimeTileWidget(
-                                prayerName: 'Isha',
-                                prayerTime: Globals.prayerTimes!['Isha']!,
-                              ),
-                            ],
                           ],
                         ),
                       ),

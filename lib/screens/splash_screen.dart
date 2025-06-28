@@ -28,15 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _startNavigationAfterDelay() {
     Timer(const Duration(seconds: 3), () async {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      bool hasSeenWelcome = prefs.getBool('hasSeenWelcome') ?? false;
-
-      if (hasSeenWelcome) {
-        _navigateToHome();
-      } else {
-        await prefs.setBool('hasSeenWelcome', true);
-        _navigateToWelcome();
-      }
+      _navigateToHome();
     });
   }
 

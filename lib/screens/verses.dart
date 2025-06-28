@@ -142,21 +142,28 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   }
 
   Future<void> _loadScrollPosition() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _lastScrollPosition = prefs.getDouble('scroll_position_${widget.surahId}') ?? 0.0;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_lastScrollPosition);
-      }
-    });
+  final prefs = await SharedPreferences.getInstance();
+  final savedPosition = prefs.getDouble('scroll_position_${widget.surahId}') ?? 0.0;
+  
+  setState(() {
+    _lastScrollPosition = savedPosition;
+  });
+  
+  // Wait for the widget to be built and verses to be loaded
+  if (verses != null && _scrollController.hasClients) {
+    _scrollController.jumpTo(savedPosition);
   }
+}
 
   Future<void> _saveScrollPosition() async {
+  if (_scrollController.hasClients) {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('scroll_position_${widget.surahId}', _scrollController.offset);
+    await prefs.setDouble(
+      'scroll_position_${widget.surahId}', 
+      _scrollController.offset
+    );
   }
+}
 
   void _setupAudioListeners() {
     _audioPlayer.onPlayerStateChanged.listen((state) {
@@ -191,15 +198,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   }
 
   Future<void> _initialize() async {
-    await Future.wait([
-      _loadLastClickedVerse(),
-      _loadVerses(),
-    ]);
-  }
-
-  Future<void> _loadLastClickedVerse() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _lastClickedVerse = prefs.getInt('last_clicked_${widget.surahId}') ?? 1);
+    // Load scroll position first
+  await _loadScrollPosition();
+  // Then load verses
+  await _loadVerses();
   }
 
   Future<void> _saveLastClickedVerse(int verse) async {
@@ -209,23 +211,30 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   }
 
   Future<void> _loadVerses() async {
-    try {
-      final quranData = await QuranServices.loadLocalVerses(widget.surahId);
-      setState(() {
-        verses = quranData.verses;
-        filteredVerses = verses;
-        _allVersesText = _combineVersesWithIcons(verses!);
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = isEnglish
-            ? 'Error loading verses: $e'
-            : 'حدث خطأ في تحميل الآيات: $e';
-        isLoading = false;
-      });
-    }
+  try {
+    final quranData = await QuranServices.loadLocalVerses(widget.surahId);
+    setState(() {
+      verses = quranData.verses;
+      filteredVerses = verses;
+      _allVersesText = _combineVersesWithIcons(verses!);
+      isLoading = false;
+    });
+    
+    // After verses are loaded, restore scroll position
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients && _lastScrollPosition > 0) {
+        _scrollController.jumpTo(_lastScrollPosition);
+      }
+    });
+  } catch (e) {
+    setState(() {
+      errorMessage = isEnglish
+          ? 'Error loading verses'
+          : 'حدث خطأ في تحميل الآيات';
+      isLoading = false;
+    });
   }
+}
 
   String _toArabicNumber(int number, bool withIcon) {
     final arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -729,6 +738,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     return Column(
       children: [
         Expanded(
+          
           child: SingleChildScrollView(
             controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -964,6 +974,15 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
 
   @override
   Widget build(BuildContext context) {
+    // Restore scroll position if needed
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (_scrollController.hasClients && 
+        _lastScrollPosition > 0 && 
+        _scrollController.offset == 0) {
+      _scrollController.jumpTo(_lastScrollPosition);
+    }
+  });
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(

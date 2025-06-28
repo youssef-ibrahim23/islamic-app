@@ -16,7 +16,6 @@ class LocationSelectionPage extends StatefulWidget {
 }
 
 class _LocationSelectionPageState extends State<LocationSelectionPage> {
-  
   bool isLoading = false;
 
   @override
@@ -102,7 +101,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
 
                 const SizedBox(height: 20),
 
-                // Governorate Dropdown
+                // Governorate Dropdown (only if country selected)
                 if (Globals.showGovernorates && Globals.selectedCountry != null)
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
@@ -134,7 +133,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                       elevation: 4,
                       shadowColor: primaryColor.withOpacity(0.3),
                     ),
-                    onPressed: Globals.selectedCountry != null && Globals.selectedGovernorate != null
+                    onPressed: _canContinue()
                         ? () async {
                             setState(() => isLoading = true);
 
@@ -143,6 +142,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                                 country: Globals.selectedCountry!,
                                 governorate: Globals.selectedGovernorate!,
                               );
+
+                              if (!mounted) return;
 
                               Navigator.pushReplacement(
                                 context,
@@ -182,5 +183,9 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         ),
       ),
     );
+  }
+
+  bool _canContinue() {
+    return Globals.selectedCountry != null && Globals.selectedGovernorate != null;
   }
 }

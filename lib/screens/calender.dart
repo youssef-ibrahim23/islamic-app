@@ -1,5 +1,3 @@
-// lib/screens/enhanced_calendar_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:islamic_app/globals.dart';
@@ -7,8 +5,6 @@ import 'package:islamic_app/services/calender_services.dart';
 import 'package:islamic_app/widgets/calender/calender_widgets.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:hijri/hijri_calendar.dart';
-
-
 
 class EnhancedCalendar extends StatefulWidget {
   const EnhancedCalendar({super.key});
@@ -37,6 +33,10 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
     final size = MediaQuery.of(context).size;
     final cellSize = size.width * 0.12;
 
+    final weekdayNames = _isEnglish
+        ? ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+        : ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+
     return Scaffold(
       backgroundColor: _backgroundColor,
       appBar: AppBar(
@@ -56,9 +56,6 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
             fontSize: 22,
             fontWeight: FontWeight.w600,
           ),
-        ),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
         ),
       ),
       body: Container(
@@ -155,6 +152,9 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
                           cellPadding: EdgeInsets.zero,
                         ),
                         daysOfWeekStyle: DaysOfWeekStyle(
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                          ),
                           weekdayStyle: TextStyle(
                             color: _primaryColor,
                             fontWeight: FontWeight.bold,
@@ -167,6 +167,18 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
                           ),
                         ),
                         calendarBuilders: CalendarBuilders(
+                          dowBuilder: (context, day) {
+                            return Center(
+                              child: Text(
+                                weekdayNames[day.weekday % 7],
+                                style: TextStyle(
+                                  color: _primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                                ),
+                              ),
+                            );
+                          },
                           defaultBuilder: (context, day, focusedDay) {
                             CalendarServices.setHijriLocale(_isEnglish);
                             final hijri = HijriCalendar.fromDate(day);

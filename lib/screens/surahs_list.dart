@@ -89,12 +89,16 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   Future<void> _saveLastSurah(Chapter chapter) async {
-    Globals.currentSora = isEnglish ? chapter.nameSimple : chapter.nameArabic;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('lastSurahId', chapter.id);
-    await prefs.setString('lastSurahName', chapter.nameSimple);
-    await prefs.setString('lastSurahArabicName', chapter.nameArabic);
-  }
+  final isEnglish = Globals.languageState ?? true;
+
+  Globals.surahId = chapter.id;
+  Globals.currentSora = isEnglish ? chapter.nameSimple : chapter.nameArabic;
+
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('lastSurahId', chapter.id);
+  await prefs.setString('lastSurahName', chapter.nameSimple);
+  await prefs.setString('lastSurahArabicName', chapter.nameArabic);
+}
 
   Future<void> _toggleFavorite(Chapter chapter) async {
     final prefs = await SharedPreferences.getInstance();

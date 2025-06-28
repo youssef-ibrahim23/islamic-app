@@ -4,12 +4,13 @@ import 'package:islamic_app/screens/splash_screen.dart';
 import 'package:islamic_app/services/app_lunch_services.dart';
 
 void main() async {
+  
   WidgetsFlutterBinding.ensureInitialized();
-  await AppLaunchService.handleFirstRun(); // sets Globals.currentSora
+
+  // Handles first run, clears prefs if needed, loads surah & requests permissions
+  await AppLaunchService.handleFirstRunAndPermissions();
+
   runApp(const MyApp());
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    await AppLaunchService.requestStoragePermission();
-  });
 }
 
 class MyApp extends StatelessWidget {
