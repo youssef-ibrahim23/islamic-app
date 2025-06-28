@@ -44,12 +44,12 @@ class AzkarService {
   }
 
   // Save completion count for a specific zikr
-  static Future<void> saveCompletionCount(int index, int count) async {
-    await _prefs.setInt('azkar_completion_$index', count);
-  }
+  static Future<void> saveCompletionCount(String category, int index, int count) async {
+  await _prefs.setInt('azkar_completion_${category}_$index', count);
+}
 
-  // Load saved completion count
-  static int loadCompletionCount(int index) {
-    return _prefs.getInt('azkar_completion_$index') ?? 0;
-  }
+static int loadCompletionCount(String category, int index) {
+  return _prefs.getInt('azkar_completion_${category}_$index') ?? 0;
+}
+
 }

@@ -1,50 +1,43 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeServices {
+  
+static StreamSubscription<CompassEvent>? _compassSubscription;
 
-  static void fetchCompassData(
-    Function(bool) onPermissionResult,
-    Function(double?) onHeadingUpdate,
-  ) async {
-    // Request location permission (required for compass access on Android)
-    final status = await Permission.locationWhenInUse.request();
+static void fetchCompassData(
+  Function(bool) onPermissionResult,
+  Function(double?) onHeadingUpdate,
+) async {
+  final status = await Permission.locationWhenInUse.request();
 
-    if (status.isGranted) {
-      onPermissionResult(true);
+  if (status.isGranted) {
+    onPermissionResult(true);
 
-      // Check if the device supports compass sensors
-      final hasSensor = await FlutterCompass.events?.isBroadcast ?? false;
-      if (!hasSensor) {
-        debugPrint("⚠️ Compass sensor not available on this device.");
+    _compassSubscription?.cancel();
+
+    _compassSubscription = FlutterCompass.events?.listen((event) {
+      final heading = event.heading;
+      if (heading == null) {
         onHeadingUpdate(null);
         return;
       }
-
-      // Subscribe to compass data safely
-      FlutterCompass.events!.listen((event) {
-        final heading = event.heading;
-
-        if (heading == null) {
-          debugPrint("⚠️ Compass heading is null");
-          onHeadingUpdate(null);
-          return;
-        }
-
-        Globals.compassHeading = heading;
-        Globals.qiblaDirection = (heading - 45) % 360;
-
-        onHeadingUpdate(Globals.qiblaDirection);
-      });
-    } else {
-      // Permission denied
-      onPermissionResult(false);
-    }
+      Globals.compassHeading = heading;
+      Globals.qiblaDirection = (heading - 45) % 360;
+      onHeadingUpdate(Globals.qiblaDirection);
+    });
+  } else {
+    onPermissionResult(false);
   }
+}
 
+static void disposeCompass() {
+  _compassSubscription?.cancel();
+  _compassSubscription = null;
+}
 
   static Future<void> loadLastSurah(Function(int, String) onLoaded) async {
     final prefs = await SharedPreferences.getInstance();

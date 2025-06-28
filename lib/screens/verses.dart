@@ -1,44 +1,67 @@
-import 'dart:io';
+// ignore_for_file: unused_field, depend_on_referenced_packages, use_build_context_synchronously, deprecated_member_use
 
-import 'package:flutter/gestures.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/services/quran_services.dart';
-import 'package:islamic_app/services/verse_services.dart';
-import 'package:islamic_app/widgets/app_them.dart';
-import 'package:islamic_app/widgets/verses/app_bar.dart';
-import 'package:islamic_app/widgets/verses/audio_controls.dart';
-import 'package:islamic_app/widgets/verses/basmala.dart';
-import 'package:islamic_app/widgets/verses/verses_rich_text.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:islamic_app/models/verse.dart';
 import 'package:islamic_app/globals.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/gestures.dart';
+import 'package:dio/dio.dart';
+import 'dart:io';
 
 class SurahDetailPage extends StatefulWidget {
   final int surahId;
   final String surahName;
   final String arabicName;
 
-  const SurahDetailPage(
-    this.surahName,
-    this.surahId,
-    this.arabicName, {
-    super.key,
-  });
+  const SurahDetailPage(this.surahName, this.surahId, this.arabicName, {super.key});
 
   @override
   State<SurahDetailPage> createState() => _SurahDetailPageState();
 }
 
 class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingObserver {
+  final Color _primaryColor = const Color(0xFF8B0000);
+  final Color _textColor = const Color(0xFF333333);
+  final Color _cardColor = Colors.white;
   final ScrollController _scrollController = ScrollController();
   final AudioPlayer _audioPlayer = AudioPlayer();
   final TextEditingController _searchController = TextEditingController();
 
-  String get _audioBaseUrl =>
-      'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
-  String get _downloadBaseUrl =>
-      'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
+  List<Verse>? verses;
+  List<Verse>? filteredVerses;
+  String? _allVersesText;
+  int? _lastClickedVerse;
+  bool isLoading = true;
+  String errorMessage = '';
+  PlayerState _playerState = PlayerState.stopped;
+  double _playbackSpeed = 1.0;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  bool _isPlaying = false;
+  bool _showAudioControls = false;
+  bool _isDownloaded = false;
+  bool _isDownloading = false;
+  bool _isPlayButtonLoading = false;
+  double _downloadProgress = 0.0;
+  String? _localAudioPath;
+  double _fontSize = 24.0;
+  double _lastScrollPosition = 0.0;
+  int? _selectedVerse;
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  bool get isEnglish => Globals.languageState ?? true;
+  String get fontFamily => isEnglish ? 'Roboto' : 'Tajawal';
+  String get arabicFontFamily => 'Scheherazade New';
+  
+  String get _audioBaseUrl => 'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
+  String get _downloadBaseUrl => 'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
 
   @override
   void initState() {
@@ -46,13 +69,13 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     WidgetsBinding.instance.addObserver(this);
     _initialize();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light.copyWith(
-      statusBarColor: primaryColor,
-      systemNavigationBarColor: cardColor,
+      statusBarColor: _primaryColor,
+      systemNavigationBarColor: _cardColor,
     ));
     _setupAudioListeners();
     _checkIfDownloaded();
     _loadScrollPosition();
-    _searchController.addListener(_onSearchChanged);
+    _searchController.addListener(() => _onSearchChanged());
   }
 
   @override
@@ -66,6 +89,107 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _saveScrollPosition();
+      Globals.isSearching = false;
+    } else if (state == AppLifecycleState.resumed) {
+      _loadScrollPosition();
+      Globals.isSearching = false;
+    }
+  }
+
+  // Add WillPopCallback to handle device back button
+  Future<bool> _onWillPop() async {
+    await _saveScrollPosition();
+    return true; // Allow the back navigation
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+      _filterVerses();
+    });
+  }
+
+  String _normalizeArabic(String input) {
+  final diacritics = RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]');
+  String normalized = input.replaceAll(diacritics, '');
+
+  // Unify letter variations
+  normalized = normalized.replaceAll(RegExp(r'[إأٱآ]'), 'ا');
+  normalized = normalized.replaceAll('ى', 'ي');
+  normalized = normalized.replaceAll('ؤ', 'و');
+  normalized = normalized.replaceAll('ئ', 'ي');
+  normalized = normalized.replaceAll('ـ', ''); // Tatweel
+
+  return normalized;
+}
+
+
+  void _filterVerses() {
+    final query = _normalizeArabic(_searchQuery);
+
+    if (query.isEmpty) {
+      filteredVerses = verses;
+    } else {
+      filteredVerses = verses?.where((verse) {
+        final verseText = _normalizeArabic(verse.textUthmani);
+        return verseText.contains(query);
+      }).toList();
+    }
+  }
+
+  Future<void> _loadScrollPosition() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _lastScrollPosition = prefs.getDouble('scroll_position_${widget.surahId}') ?? 0.0;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_lastScrollPosition);
+      }
+    });
+  }
+
+  Future<void> _saveScrollPosition() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('scroll_position_${widget.surahId}', _scrollController.offset);
+  }
+
+  void _setupAudioListeners() {
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _playerState = state;
+          _isPlaying = state == PlayerState.playing;
+          _showAudioControls = _isPlaying;
+          _isPlayButtonLoading = false;
+        });
+      }
+    });
+    
+    _audioPlayer.onDurationChanged.listen((duration) {
+      if (mounted) setState(() => _duration = duration);
+    });
+    
+    _audioPlayer.onPositionChanged.listen((position) {
+      if (mounted) setState(() => _position = position);
+    });
+    
+    _audioPlayer.onPlayerComplete.listen((event) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+          _position = Duration.zero;
+          _showAudioControls = false;
+          _isPlayButtonLoading = false;
+        });
+      }
+    });
+  }
+
   Future<void> _initialize() async {
     await Future.wait([
       _loadLastClickedVerse(),
@@ -73,304 +197,534 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     ]);
   }
 
-  void _setupAudioListeners() {
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (mounted) {
-        setState(() {
-          Globals.playerState = state;
-          Globals.isPlaying = state == PlayerState.playing;
-          Globals.showAudioControls = Globals.isPlaying;
-          Globals.isPlayButtonLoading = false;
-        });
-      }
-    });
-
-    _audioPlayer.onDurationChanged.listen((duration) {
-      if (mounted) setState(() => Globals.duration = duration);
-    });
-
-    _audioPlayer.onPositionChanged.listen((position) {
-      if (mounted) setState(() => Globals.position = position);
-    });
-
-    _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) {
-        setState(() {
-          Globals.isPlaying = false;
-          Globals.position = Duration.zero;
-          Globals.showAudioControls = false;
-          Globals.isPlayButtonLoading = false;
-        });
-      }
-    });
-  }
-
-  Future<void> _loadScrollPosition() async {
-    final position = await QuranServices.loadScrollPosition(widget.surahId);
-    if (mounted) setState(() => Globals.lastScrollPosition = position);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(Globals.lastScrollPosition);
-      }
-    });
-  }
-
-  Future<void> _saveScrollPosition() async {
-    await QuranServices.saveScrollPosition(widget.surahId, _scrollController.offset);
-  }
-
   Future<void> _loadLastClickedVerse() async {
-    final verse = await QuranServices.loadLastClickedVerse(widget.surahId);
-    if (mounted) setState(() => Globals.lastClickedVerse = verse);
+    final prefs = await SharedPreferences.getInstance();
+    setState(() => _lastClickedVerse = prefs.getInt('last_clicked_${widget.surahId}') ?? 1);
   }
 
   Future<void> _saveLastClickedVerse(int verse) async {
-    await QuranServices.saveLastClickedVerse(widget.surahId, verse);
-    if (mounted) setState(() => Globals.lastClickedVerse = verse);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_clicked_${widget.surahId}', verse);
+    setState(() => _lastClickedVerse = verse);
   }
 
   Future<void> _loadVerses() async {
     try {
       final quranData = await QuranServices.loadLocalVerses(widget.surahId);
-      if (mounted) {
-        setState(() {
-          Globals.verses = quranData.verses;
-          Globals.filteredVerses = Globals.verses;
-          Globals.allVersesText = VerseService.combineVersesWithIcons(Globals.verses!);
-          Globals.verseIsLoading = false;
-        });
-      }
+      setState(() {
+        verses = quranData.verses;
+        filteredVerses = verses;
+        _allVersesText = _combineVersesWithIcons(verses!);
+        isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          Globals.errorMessage = Globals.languageState! 
-              ? 'Error loading verses: $e' 
-              : 'حدث خطأ في تحميل الآيات: $e';
-          Globals.verseIsLoading = false;
-        });
+      setState(() {
+        errorMessage = isEnglish
+            ? 'Error loading verses: $e'
+            : 'حدث خطأ في تحميل الآيات: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  String _toArabicNumber(int number, bool withIcon) {
+    final arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+
+    final arabicNumber = number.toString().split('').map((d) {
+      return arabicDigits[int.parse(d)];
+    }).join();
+
+    return withIcon ? '۝$arabicNumber' : arabicNumber;
+  }
+
+  String _combineVersesWithIcons(List<Verse> verses) {
+    final buffer = StringBuffer();
+    for (int i = 0; i < verses.length; i++) {
+      final verse = verses[i];
+      final verseNumber = i + 1;
+      final verseIcon = _toArabicNumber(verseNumber, true);
+      
+      buffer.write(verse.textUthmani);
+      buffer.write(' $verseIcon');
+      
+      if (i < verses.length - 1) {
+        buffer.write(' ');
       }
     }
+    return buffer.toString();
   }
 
   Future<void> _playSurah() async {
     try {
-      setState(() => Globals.isPlayButtonLoading = true);
-      await QuranServices.playAudio(
-        audioPlayer: _audioPlayer,
-        localPath: Globals.localAudioPath,
-        remoteUrl: _audioBaseUrl,
-      );
-      if (mounted) {
-        setState(() {
-          Globals.isPlaying = true;
-          Globals.showAudioControls = true;
-          Globals.isPlayButtonLoading = false;
-        });
+      setState(() => _isPlayButtonLoading = true);
+      
+      if (_isDownloaded && _localAudioPath != null) {
+        await _audioPlayer.play(DeviceFileSource(_localAudioPath!));
+      } else {
+        await _audioPlayer.play(UrlSource(_audioBaseUrl));
       }
+      setState(() {
+        _isPlaying = true;
+        _showAudioControls = true;
+        _isPlayButtonLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => Globals.isPlayButtonLoading = false);
-        _showSnackBar(Globals.languageState! ? 'Error playing audio' : 'حدث خطأ في تشغيل الصوت');
-      }
+  setState(() => _isPlayButtonLoading = false);
+
+  String message = isEnglish
+        ? 'No internet connection. Please download the verse to play offline.'
+        : 'لا يوجد اتصال بالإنترنت. يرجى تنزيل الآية للتشغيل دون اتصال.';
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Directionality(
+        textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+        child: Text(message)),
+    ),
+  );
+}
+  }
+
+  Future<void> _pauseSurah() async {
+    await _audioPlayer.pause();
+    setState(() => _isPlaying = false);
+  }
+
+  Future<void> _stopSurah() async {
+    await _audioPlayer.stop();
+    setState(() {
+      _isPlaying = false;
+      _position = Duration.zero;
+      _showAudioControls = false;
+    });
+  }
+
+  Future<void> _changePlaybackSpeed() async {
+    double newSpeed;
+    if (_playbackSpeed == 1.0) {
+      newSpeed = 1.5;
+    } else if (_playbackSpeed == 1.5) {
+      newSpeed = 0.5;
+    } else {
+      newSpeed = 1.0;
     }
+    
+    setState(() => _playbackSpeed = newSpeed);
+    await _audioPlayer.setPlaybackRate(newSpeed);
   }
 
   Future<void> _downloadAudio() async {
-    try {
+  try {
+    final dir = await getApplicationDocumentsDirectory();
+    final filePath = '${dir.path}/surah_${widget.surahId}.mp3';
+    final file = File(filePath);
+
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    if (mounted) {
       setState(() {
-        Globals.isDownloading = true;
-        Globals.downloadProgress = 0.0;
+        _isDownloading = true;
+        _downloadProgress = 0.0;
+      });
+    }
+
+    final dio = Dio();
+    await dio.download(
+      _downloadBaseUrl,
+      filePath,
+      onReceiveProgress: (received, total) {
+        if (total != -1 && mounted) {
+          setState(() {
+            _downloadProgress = received / total;
+          });
+        }
+      },
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('audio_${widget.surahId}', filePath);
+
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+        _isDownloaded = true;
+        _localAudioPath = filePath;
       });
 
-      final path = await QuranServices.downloadAudio(
-        surahId: widget.surahId,
-        downloadUrl: _downloadBaseUrl,
-        onProgress: (progress) {
-          if (mounted) setState(() => Globals.downloadProgress = progress);
-        },
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Directionality(
+            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            child: Text(
+              isEnglish
+                  ? 'Audio downloaded successfully'
+                  : 'تم تنزيل الصوت بنجاح',
+            ),
+          ),
+        ),
       );
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _isDownloading = false;
+      });
 
-      await QuranServices.saveAudioPath(widget.surahId, path);
-
-      if (mounted) {
-        setState(() {
-          Globals.isDownloading = false;
-          Globals.isDownloaded = true;
-          Globals.localAudioPath = path;
-        });
-        _showSnackBar(Globals.languageState! 
-            ? 'Audio downloaded successfully' 
-            : 'تم تنزيل الصوت بنجاح');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => Globals.isDownloading = false);
-        _showSnackBar(Globals.languageState! ? 'Download failed' : 'فشل التنزيل');
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Directionality(
+            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            child: Text(
+              isEnglish
+                  ? 'Download failed'
+                  : 'فشل التنزيل',
+            ),
+          ),
+        ),
+      );
     }
   }
+}
 
   Future<void> _checkIfDownloaded() async {
-    final path = await QuranServices.getAudioPath(widget.surahId);
-    if (path != null && await File(path).exists()) {
-      if (mounted) {
+    final prefs = await SharedPreferences.getInstance();
+    final path = prefs.getString('audio_${widget.surahId}');
+    if (path != null) {
+      final file = File(path);
+      if (await file.exists()) {
         setState(() {
-        Globals.isDownloaded = true;
-        Globals.localAudioPath = path;
-      });
+          _isDownloaded = true;
+          _localAudioPath = path;
+        });
+      } else {
+        await prefs.remove('audio_${widget.surahId}');
       }
-    } else {
-      await QuranServices.removeAudioPath(widget.surahId);
     }
   }
 
   Future<void> _deleteDownloadedAudio() async {
     try {
-      if (Globals.localAudioPath != null) {
-        final file = File(Globals.localAudioPath!);
-        if (await file.exists()) await file.delete();
+      if (_localAudioPath != null) {
+        final file = File(_localAudioPath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
       }
 
-      await QuranServices.removeAudioPath(widget.surahId);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('audio_${widget.surahId}');
 
-      if (mounted) {
-        setState(() {
-          Globals.isDownloaded = false;
-          Globals.localAudioPath = null;
-        });
-        _showSnackBar(Globals.languageState! ? 'Audio deleted' : 'تم حذف الصوت');
-      }
+      setState(() {
+        _isDownloaded = false;
+        _localAudioPath = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Directionality(
+            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            child: Text(
+              isEnglish 
+                  ? 'Audio deleted'
+                  : 'تم حذف الصوت',
+            ),
+          ),
+        ),
+      );
     } catch (e) {
-      _showSnackBar(Globals.languageState! 
-          ? 'Error deleting audio' 
-          : 'حدث خطأ أثناء حذف الصوت');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Directionality(
+            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            child: Text(
+              isEnglish 
+                  ? 'Error deleting audio'
+                  : 'حدث خطأ أثناء حذف الصوت',
+            ),
+          ),
+        ),
+      );
     }
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return [minutes, seconds].join(':');
   }
 
-  void _onSearchChanged() {
-    setState(() {
-      Globals.searchQuery = _searchController.text;
-      _filterVerses();
+  AppBar _buildAppBar() {
+    return AppBar(
+      backgroundColor: _primaryColor,
+      elevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle.light,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          _audioPlayer.stop();
+          _saveScrollPosition().then((_) {
+            Navigator.pop(context);
+          });
+        },
+      ),
+      centerTitle: true,
+      title: _isSearching
+          ? Directionality(
+            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: isEnglish ? 'Search verses...' : 'ابحث في الآيات...',
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                cursorColor: Colors.white,
+              ),
+          )
+          : Column(
+              children: [
+                Text(
+                  isEnglish ? widget.surahName : widget.arabicName,
+                  style: GoogleFonts.getFont(
+                    fontFamily,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  '${isEnglish ? 'Surah' : 'سورة'} ${isEnglish ? widget.surahId : _toArabicNumber(widget.surahId, false)}',
+                  style: GoogleFonts.getFont(
+                    fontFamily,
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+      actions: [
+        IconButton(
+          icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white),
+          onPressed: () {
+            setState(() {
+              _isSearching = !_isSearching;
+              if (!_isSearching) {
+                _searchController.clear();
+                _searchQuery = '';
+                _filterVerses();
+              }
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildBasmala() {
+  return Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 24),
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color: _primaryColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+    ),
+    child: Text(
+      "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontFamily: arabicFontFamily,  // Changed to use the same font family as verses
+        fontSize: _fontSize + 4,       // Slightly larger than verse font size
+        fontWeight: FontWeight.bold,
+        color: _primaryColor,
+        height: 1.8,
+      ),
+    ),
+  );
+}
+
+  Widget _buildVerseRichText(List<InlineSpan> spans) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    child: RichText(
+      textAlign: TextAlign.justify,
+      textDirection: TextDirection.rtl,
+      text: TextSpan(
+        children: spans,
+        style: TextStyle(
+          fontSize: _fontSize,
+          height: 2.0,
+          fontFamily: arabicFontFamily,
+          color: _textColor,
+        ),
+      ),
+    ),
+  );
+}
+
+
+  List<InlineSpan> _buildVerseSpans() {
+  final spans = <InlineSpan>[];
+  final versesToDisplay = filteredVerses ?? verses ?? [];
+
+  for (int i = 0; i < versesToDisplay.length; i++) {
+    final verse = versesToDisplay[i];
+    final verseNumber = verses!.indexOf(verse) + 1;
+    final verseIcon = _toArabicNumber(verseNumber, true);
+    final verseText = '${verse.textUthmani} $verseIcon';
+
+    final isSelected = _selectedVerse == verseNumber;
+    final isHighlighted = _searchQuery.isNotEmpty &&
+        verse.textUthmani.contains(_searchQuery);
+
+    spans.add(
+      TextSpan(
+        text: '$verseText ',
+        style: TextStyle(
+          fontFamily: arabicFontFamily,
+          color: isSelected ? _primaryColor : _textColor,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            setState(() {
+              _selectedVerse = verseNumber;
+            });
+            _showVerseOptions(verseText, verseNumber);
+          },
+      ),
+    );
+  }
+  return spans;
+}
+
+
+  void _showVerseOptions(String verseText, int verseNumber) {
+    final verse = verses![verseNumber - 1];
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.share),
+                  title: Text(isEnglish ? 'Share' : 'مشاركة'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _shareVerse(verse, verseNumber);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.copy),
+                  title: Text(isEnglish ? 'Copy' : 'نسخ'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Clipboard.setData(ClipboardData(text: verseText));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Directionality(
+                          textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+                          child: Text(
+                            isEnglish ? 'Copied to clipboard' : 'تم النسخ',
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.bookmark),
+                  title: Text(isEnglish ? 'Bookmark' : 'حفظ'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _saveLastClickedVerse(verseNumber);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Directionality(
+                          textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+                          child: Text(
+                            isEnglish ? 'Verse bookmarked' : 'تم حفظ الآية',
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(isEnglish ? 'Cancel' : 'إلغاء'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ).then((_) {
+      setState(() {
+        _selectedVerse = null;
+      });
     });
   }
 
-  void _filterVerses() {
-    final query = VerseService.normalizeArabic(Globals.searchQuery);
-    Globals.filteredVerses = query.isEmpty
-        ? Globals.verses
-        : Globals.verses?.where((verse) {
-            return VerseService.normalizeArabic(verse.textUthmani).contains(query);
-          }).toList();
+  void _shareVerse(Verse verse, int verseNumber) {
+    final arabicNumber = _toArabicNumber(verseNumber, false);
+    final verseTextWithNumber = '${verse.textUthmani.trim()} (${_toArabicNumber(verseNumber, false)})';
+
+    final surahName = isEnglish ? widget.surahName : widget.arabicName;
+
+    final shareText = isEnglish
+        ? '$surahName, Verse $verseNumber:\n\n$verseTextWithNumber\n\n- Shared via Islamic App'
+        : '$surahName، الآية $arabicNumber:\n\n$verseTextWithNumber\n\n- مشاركة من تطبيق القرآن';
+
+    final shareSubject = isEnglish
+        ? 'Quran Verse - $surahName $verseNumber'
+        : 'آية قرآنية - $surahName $arabicNumber';
+
+    Share.share(shareText, subject: shareSubject);
   }
 
-  void _showVerseOptions(String verseText, int verseNumber) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: Text(Globals.languageState! ? 'Share' : 'مشاركة'),
-              onTap: () {
-                Navigator.pop(context);
-                VerseService.shareVerse(
-                  verse: Globals.verses![verseNumber - 1],
-                  verseNumber: verseNumber,
-                  surahName: widget.surahName,
-                  arabicName: widget.arabicName,
-                  isEnglish: Globals.languageState!,
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.copy),
-              title: Text(Globals.languageState! ? 'Copy' : 'نسخ'),
-              onTap: () {
-                Navigator.pop(context);
-                VerseService.copyToClipboard(verseText);
-                _showSnackBar(Globals.languageState! ? 'Copied to clipboard' : 'تم النسخ');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.bookmark),
-              title: Text(Globals.languageState! ? 'Bookmark' : 'حفظ'),
-              onTap: () {
-                Navigator.pop(context);
-                _saveLastClickedVerse(verseNumber);
-                _showSnackBar(Globals.languageState! ? 'Verse bookmarked' : 'تم حفظ الآية');
-              },
-            ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(Globals.languageState! ? 'Cancel' : 'إلغاء'),
-            ),
-          ],
-        ),
+  Widget _buildSearchResultsInfo() {
+    if (_searchQuery.isEmpty || filteredVerses == null) return const SizedBox();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: _primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
       ),
-    ).then((_) => setState(() => Globals.selectedVerse = null));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
-    return WillPopScope(
-      onWillPop: () async {
-        await _saveScrollPosition();
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: cardColor,
-        appBar: SurahAppBar(
-          surahName: widget.surahName,
-          arabicName: widget.arabicName,
-          surahId: widget.surahId,
-          isEnglish: Globals.languageState!,
-          isSearching: Globals.isSearching,
-          searchController: _searchController,
-          onSearchToggle: () => setState(() {
-            Globals.isSearching = !Globals.isSearching;
-            if (!Globals.isSearching) {
-              _searchController.clear();
-              Globals.searchQuery = '';
-              _filterVerses();
-            }
-          }),
-          onBackPressed: () {
-            _audioPlayer.stop();
-            _saveScrollPosition().then((_) => Navigator.pop(context));
-          },
-          fontFamily: Globals.fontFamily,
+      child: Text(
+        isEnglish
+            ? '${filteredVerses!.length} verses found'
+            : 'تم العثور على ${filteredVerses!.length} آية',
+        style: GoogleFonts.getFont(
+          fontFamily,
+          color: _primaryColor,
+          fontWeight: FontWeight.bold,
         ),
-        body: SafeArea(
-          child: AnnotatedRegion<SystemUiOverlayStyle>(
-            value: SystemUiOverlayStyle.light.copyWith(
-              statusBarColor: primaryColor,
-              systemNavigationBarColor: cardColor,
-            ),
-            child: _buildBody(),
-          ),
-        ),
-        floatingActionButton: _buildFloatingButtons(),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (Globals.verseIsLoading) return _buildLoading();
-    if (Globals.errorMessage.isNotEmpty) return _buildError();
-    return _buildContent();
-  }
-
   Widget _buildContent() {
-    if (Globals.verses == null) return Container();
+    if (verses == null) return Container();
 
     return Column(
       children: [
@@ -381,255 +735,357 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (widget.surahId != 9 && widget.surahId != 1)
-                  BasmalaWidget(
-                    primaryColor: primaryColor,
-                    arabicFontFamily: Globals.arabicFontFamily,
-                  ),
-                if (Globals.searchQuery.isNotEmpty && Globals.filteredVerses != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      Globals.languageState!
-                          ? '${Globals.filteredVerses!.length} verses found'
-                          : 'تم العثور على ${Globals.filteredVerses!.length} آية',
-                      style: TextStyle(
-                        fontFamily: Globals.fontFamily,
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                VerseRichText(
-                  spans: _buildVerseSpans(),
-                  fontSize: Globals.fontSize,
-                  arabicFontFamily: Globals.arabicFontFamily,
-                  onVerseTap: (verseNumber) {
-                    setState(() => Globals.selectedVerse = verseNumber);
-                    _showVerseOptions(
-                      '${Globals.verses![verseNumber - 1].textUthmani} ${VerseService.toArabicNumber(verseNumber, true)}',
-                      verseNumber,
-                    );
-                  },
-                ),
+                if (widget.surahId != 9 && widget.surahId != 1) _buildBasmala(),
+                _buildSearchResultsInfo(),
+                _buildVerseRichText(_buildVerseSpans()),
               ],
             ),
           ),
         ),
-        AudioControls(
-          showControls: Globals.showAudioControls,
-          isPlaying: Globals.isPlaying,
-          isDownloading: Globals.isDownloading,
-          downloadProgress: Globals.downloadProgress,
-          position: Globals.position,
-          duration: Globals.duration,
-          playbackSpeed: Globals.playbackSpeed,
-          onPlayPause: () => Globals.isPlaying ? _pauseSurah() : _playSurah(),
-          onStop: _stopSurah,
-          onChangeSpeed: _changePlaybackSpeed,
-          fontFamily: Globals.fontFamily,
-          primaryColor: primaryColor,
-          textColor: textColor,
-          cardColor: cardColor,
-        ),
+        _buildAudioControls(),
       ],
     );
   }
 
-  List<InlineSpan> _buildVerseSpans() {
-    return (Globals.filteredVerses ?? Globals.verses ?? []).map((verse) {
-      final verseNumber = Globals.verses!.indexOf(verse) + 1;
-      final isSelected = Globals.selectedVerse == verseNumber;
-      final isHighlighted = Globals.searchQuery.isNotEmpty && 
-          verse.textUthmani.contains(Globals.searchQuery);
+  Widget _buildAudioControls() {
+    final bool hasDuration = _duration.inSeconds > 0;
 
-      return TextSpan(
-        text: '${verse.textUthmani} ${VerseService.toArabicNumber(verseNumber, true)} ',
-        style: TextStyle(
-          color: isSelected ? primaryColor : textColor,
-          backgroundColor: isHighlighted ? primaryColor.withOpacity(0.1) : null,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeIn,
+      switchOutCurve: Curves.easeOut,
+      child: _showAudioControls
+          ? Container(
+              key: const ValueKey('audioControlsVisible'),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isDownloading)
+  Column(
+    children: [
+      LinearProgressIndicator(
+        value: _downloadProgress.clamp(0.0, 1.0),
+        backgroundColor: _primaryColor.withOpacity(0.1),
+        valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+        minHeight: 2,
+      ),
+      Text(
+        '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+        style: GoogleFonts.getFont(
+          fontFamily,
+          color: _primaryColor,
+          fontSize: 12,
         ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () {
-            setState(() => Globals.selectedVerse = verseNumber);
-            _showVerseOptions(
-              '${verse.textUthmani} ${VerseService.toArabicNumber(verseNumber, true)}',
-              verseNumber,
-            );
-          },
-      );
-    }).toList();
+      ),
+    ],
+  ),
+                  if (hasDuration)
+                    SliderTheme(
+                      data: SliderThemeData(
+                        overlayShape: SliderComponentShape.noOverlay,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                      ),
+                      child: Slider(
+                        value: _position.inSeconds.clamp(0, _duration.inSeconds).toDouble(),
+                        min: 0,
+                        max: _duration.inSeconds.toDouble(),
+                        onChanged: (value) async {
+                          await _audioPlayer.seek(Duration(seconds: value.toInt()));
+                        },
+                        activeColor: _primaryColor,
+                        inactiveColor: _primaryColor.withOpacity(0.3),
+                      ),
+                    ),
+                  if (hasDuration)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatDuration(_position),
+                            style: GoogleFonts.getFont(
+                              fontFamily,
+                              color: _textColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            _formatDuration(_duration),
+                            style: GoogleFonts.getFont(
+                              fontFamily,
+                              color: _textColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Tooltip(
+                        message: isEnglish ? 'Playback Speed' : 'سرعة التشغيل',
+                        child: TextButton(
+                          onPressed: _changePlaybackSpeed,
+                          child: Text(
+                            '${_playbackSpeed}x',
+                            style: GoogleFonts.getFont(
+                              fontFamily,
+                              color: _primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: _primaryColor,
+                        child: IconButton(
+                          icon: Icon(
+                            _isPlaying ? Icons.pause : Icons.play_arrow,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          onPressed: () {
+                            if (_isPlaying) {
+                              _pauseSurah();
+                            } else {
+                              _playSurah();
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Tooltip(
+                        message: isEnglish ? 'Stop' : 'إيقاف',
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.stop,
+                            color: _primaryColor,
+                            size: 28,
+                          ),
+                          onPressed: _stopSurah,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
   }
 
-  Widget _buildLoading() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              Globals.languageState! ? 'Loading Surah...' : 'جاري تحميل السورة...',
-              style: TextStyle(
-                fontFamily: Globals.fontFamily,
-                color: textColor,
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _buildError() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: primaryColor, size: 48),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                Globals.errorMessage,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: Globals.fontFamily,
-                  color: textColor,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _loadVerses,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                Globals.languageState! ? 'Retry' : 'إعادة المحاولة',
-                style: TextStyle(
-                  fontFamily: Globals.fontFamily,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _buildFloatingButtons() => Column(
-        mainAxisSize: MainAxisSize.min,
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          FloatingActionButton(
-            heroTag: 'zoom_out',
-            mini: true,
-            backgroundColor: primaryColor,
-            onPressed: () => setState(() {
-              if (Globals.fontSize > 16) Globals.fontSize -= 2;
-            }),
-            child: const Icon(Icons.zoom_out, color: Colors.white),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
           ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: 'zoom_in',
-            mini: true,
-            backgroundColor: primaryColor,
-            onPressed: () => setState(() {
-              if (Globals.fontSize < 36) Globals.fontSize += 2;
-            }),
-            child: const Icon(Icons.zoom_in, color: Colors.white),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: 'download',
-            mini: true,
-            backgroundColor: primaryColor,
-            onPressed: Globals.isDownloading
-                ? null
-                : () => Globals.isDownloaded 
-                    ? _deleteDownloadedAudio() 
-                    : _downloadAudio(),
-            child: Globals.isDownloading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      value: Globals.downloadProgress,
-                      strokeWidth: 2,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Icon(
-                    Globals.isDownloaded ? Icons.delete : Icons.download,
-                    color: Colors.white,
-                  ),
-          ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: 'play',
-            backgroundColor: primaryColor,
-            onPressed: Globals.isPlayButtonLoading
-                ? null
-                : () => Globals.isPlaying ? _stopSurah() : _playSurah(),
-            child: Globals.isPlayButtonLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Icon(
-                    Globals.isPlaying ? Icons.stop : Icons.play_arrow,
-                    color: Colors.white,
-                  ),
+          const SizedBox(height: 16),
+          Text(
+            isEnglish ? 'Loading Surah...' : 'جاري تحميل السورة...',
+            style: GoogleFonts.getFont(
+              fontFamily,
+              color: _textColor,
+            ),
           ),
         ],
-      );
-
-  Future<void> _pauseSurah() async {
-    await _audioPlayer.pause();
-    if (mounted) setState(() => Globals.isPlaying = false);
+      ),
+    );
   }
 
-  Future<void> _stopSurah() async {
-    await _audioPlayer.stop();
-    if (mounted) {
-      setState(() {
-        Globals.isPlaying = false;
-        Globals.position = Duration.zero;
-        Globals.showAudioControls = false;
-      });
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: _primaryColor, size: 48),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              errorMessage,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.getFont(
+                fontFamily,
+                color: _textColor,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadVerses,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              isEnglish ? 'Retry' : 'إعادة المحاولة',
+              style: GoogleFonts.getFont(
+                fontFamily,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (isLoading) {
+      return _buildLoading();
+    } else if (errorMessage.isNotEmpty) {
+      return _buildError();
+    } else {
+      return _buildContent();
     }
-  }
-
-  Future<void> _changePlaybackSpeed() async {
-    double newSpeed = Globals.playbackSpeed == 1.0
-        ? 1.5
-        : Globals.playbackSpeed == 1.5
-            ? 0.5
-            : 1.0;
-
-    setState(() => Globals.playbackSpeed = newSpeed);
-    await _audioPlayer.setPlaybackRate(newSpeed);
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      _saveScrollPosition();
-      Globals.isSearching = false;
-    } else if (state == AppLifecycleState.resumed) {
-      _loadScrollPosition();
-      Globals.isSearching = false;
-    }
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: _cardColor,
+        appBar: _buildAppBar(),
+        body: SafeArea(
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle.light.copyWith(
+              statusBarColor: _primaryColor,
+              systemNavigationBarColor: _cardColor,
+            ),
+            child: _buildBody(),
+          ),
+        ),
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FloatingActionButton(
+              heroTag: 'zoom_out',
+              mini: true,
+              backgroundColor: _primaryColor,
+              onPressed: () {
+                setState(() {
+                  if (_fontSize > 16) {
+                    _fontSize -= 2;
+                  }
+                });
+              },
+              child: const Icon(
+                Icons.zoom_out,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton(
+              heroTag: 'zoom_in',
+              mini: true,
+              backgroundColor: _primaryColor,
+              onPressed: () {
+                setState(() {
+                  if (_fontSize < 36) {
+                    _fontSize += 2;
+                  }
+                });
+              },
+              child: const Icon(
+                Icons.zoom_in,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton(
+  heroTag: 'download',
+  mini: true,
+  backgroundColor: _primaryColor,
+  onPressed: _isDownloading 
+      ? null
+      : () {
+          if (_isDownloaded) {
+            _deleteDownloadedAudio();
+          } else {
+            _downloadAudio();
+          }
+        },
+  child: _isDownloading
+      ? Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                value: _downloadProgress,
+                strokeWidth: 2,
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            Text(
+              '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        )
+      : Icon(
+          _isDownloaded ? Icons.delete : Icons.download,
+          color: Colors.white,
+        ),
+),
+            const SizedBox(height: 10),
+            FloatingActionButton(
+              heroTag: 'play',
+              backgroundColor: _primaryColor,
+              onPressed: _isPlayButtonLoading 
+                  ? null
+                  : () {
+                      if (_isPlaying) {
+                        _stopSurah();
+                      } else {
+                        _playSurah();
+                      }
+                    },
+              child: _isPlayButtonLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(
+                      _isPlaying ? Icons.stop : Icons.play_arrow,
+                      color: Colors.white,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

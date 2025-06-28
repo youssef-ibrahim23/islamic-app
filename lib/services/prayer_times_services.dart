@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/location.dart';
@@ -8,22 +10,94 @@ import 'package:islamic_app/screens/location_selection_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PrayerTimesService {
-  static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback onStateChanged) async {
-    final prefs = await SharedPreferences.getInstance();
-    String? country = prefs.getString('country');
-    String? governorate = prefs.getString('governorate');
 
-    if (country == null || governorate == null) {
+static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback onStateChanged) async {
+  final prefs = await SharedPreferences.getInstance();
+  String? country = prefs.getString('country');
+  String? governorate = prefs.getString('governorate');
+
+  if (country == null || governorate == null) {
+    try {
+      // 🔹 Check permission and request if needed
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception("Location services are disabled.");
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception("Location permission denied.");
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception("Location permission permanently denied.");
+      }
+
+      // 🔹 Get position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // 🔹 Reverse geocode to get location name
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+        
+      );
+
+      if (placemarks.isNotEmpty) {
+  Placemark place = placemarks.first;
+
+  // Raw data (likely English)
+  String rawCountry = place.country ?? "Unknown";
+  String rawGovernorate = place.administrativeArea ?? "Unknown";
+
+  // Convert English country name to Arabic (if possible)
+  String countryArabic = Locations.arabicCountryFromEnglish(rawCountry);
+
+  // Convert English governorate to Arabic if possible
+  String governorateArabic =
+      Locations.englishGovernorateToArabic(rawCountry, rawGovernorate) ??
+      rawGovernorate; // fallback to raw if no match
+
+  // Save Arabic names
+  country = countryArabic;
+  governorate = governorateArabic;
+
+  // Save to prefs
+  await prefs.setString('country', country);
+  await prefs.setString('governorate', governorate);
+
+  // Set globals
+  Globals.currentLocation = "$governorate, $country";
+  Globals.locationSelected = true;
+
+  Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Globals.coordinates;
+
+  await _initializePrayerTimes(onStateChanged);
+}
+
+ else {
+        throw Exception("Failed to detect location.");
+      }
+    } catch (e) {
+      debugPrint("Location error: $e");
+
+      // If failed, go to manual selection page
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const LocationSelectionPage()),
         );
       });
-    } else {
-      await _loadLocationAndInitialize(onStateChanged);
     }
+  } else {
+    await _loadLocationAndInitialize(onStateChanged);
   }
+}
 
   static Future<void> changeLocation(BuildContext context, VoidCallback onStateChanged) async {
     final result = await Navigator.push(
@@ -46,7 +120,7 @@ class PrayerTimesService {
     if (country != null && governorate != null) {
       Globals.currentLocation = '$governorate, $country';
       Globals.locationSelected = true;
-      Globals.coordinates = Location().governorateCoordinates[governorate] ?? Globals.coordinates;
+      Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Globals.coordinates;
     }
 
     await _initializePrayerTimes(onStateChanged);

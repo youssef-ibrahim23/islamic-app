@@ -60,8 +60,8 @@ class Globals {
   /// Azkar & Counters
   /// ----------------------------
   static Map<String, List<Azkar>> azkarCategories = {};
-  static final Map<int, int> currentCounts = {};
-  static final Map<int, int> completionCounts = {};
+   static Map<String, Map<int, int>> currentCounts = {};
+  static Map<String, Map<int, int>> completionCounts = {};
 
   /// ----------------------------
   /// Prayer Time & Location
@@ -145,6 +145,10 @@ class Globals {
   static bool isSearching = false;
   static String searchQuery = '';
   static bool verseIsLoading = true;
-  
+  static String downloadStatus = '';
+
+  static String? userCountry;
+  static String? userGovernorate;
+
 
 }

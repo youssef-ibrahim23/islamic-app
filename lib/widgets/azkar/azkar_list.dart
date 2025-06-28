@@ -5,13 +5,18 @@ import 'package:islamic_app/services/azkar_services.dart';
 import 'package:islamic_app/widgets/azkar/azkar_card.dart';
 
 class AzkarList extends StatefulWidget {
+  final String category; // <-- Add category
   final List<Azkar> azkarList;
 
-  const AzkarList({super.key, required this.azkarList});
+  const AzkarList({
+    super.key,
+    required this.category,
+    required this.azkarList,
+  });
 
-  // You can still use this as a builder
-  static Widget buildAzkarList(List<Azkar> azkarList) {
-    return AzkarList(azkarList: azkarList);
+  // Optional builder method
+  static Widget buildAzkarList(String category, List<Azkar> azkarList) {
+    return AzkarList(category: category, azkarList: azkarList);
   }
 
   @override
@@ -23,14 +28,18 @@ class _AzkarListState extends State<AzkarList> {
   void initState() {
     super.initState();
 
-    // Initialize completionCounts from SharedPreferences
+    // Initialize currentCounts and completionCounts for this category
+    Globals.currentCounts[widget.category] ??= {};
+    Globals.completionCounts[widget.category] ??= {};
+
     for (int i = 0; i < widget.azkarList.length; i++) {
       final azkar = widget.azkarList[i];
       final count = int.tryParse(azkar.count) ?? 1;
       final displayCount = count == 1 ? 3 : count;
 
-      Globals.currentCounts[i] ??= displayCount;
-      Globals.completionCounts[i] = AzkarService.loadCompletionCount(i);
+      Globals.currentCounts[widget.category]![i] ??= displayCount;
+      Globals.completionCounts[widget.category]![i] =
+          AzkarService.loadCompletionCount(widget.category, i);
     }
   }
 
@@ -45,14 +54,17 @@ class _AzkarListState extends State<AzkarList> {
         final count = int.tryParse(azkar.count) ?? 1;
         final displayCount = count == 1 ? 3 : count;
 
-        // Pass a callback to update the state
-        return AzkarCard(
-          index: index,
-          azkar: azkar,
-          count: displayCount,
-          onChanged: () {
-            setState(() {});
-          },
+        return Column(
+          children: [
+            AzkarCard(
+              category: widget.category, // <-- Pass category here
+              index: index,
+              azkar: azkar,
+              count: displayCount,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+          ],
         );
       },
     );

@@ -47,7 +47,7 @@ class DropDown {
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              items: Location().arabCountries.keys.map((String country) {
+              items: Locations().arabCountries.keys.map((String country) {
                 return DropdownMenuItem<String>(
                   value: country,
                   child: Text(
@@ -74,7 +74,7 @@ class DropDown {
     required String? selectedGovernorate,
     required ValueChanged<String?> onChanged,
   }) {
-    final governorates = Location().arabCountries[selectedCountry] ?? [];
+    final governorates = Locations().arabCountries[selectedCountry] ?? [];
 
     return Card(
       elevation: 4,

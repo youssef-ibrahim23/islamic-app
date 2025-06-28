@@ -3,12 +3,12 @@
 import 'package:adhan/adhan.dart';
 import 'package:islamic_app/globals.dart';
 
-class Location{
+class Locations{
 
     // Get the appropriate country map based on language
    Map<String, List<String>> get arabCountries => Globals.languageState! ? arabCountriesEnglish : arabCountriesArabic;
 
- final Map<String, List<String>> arabCountriesEnglish = {
+ static final Map<String, List<String>> arabCountriesEnglish = {
   'Egypt': [
     'Cairo', 'Giza', 'Alexandria', 'Aswan', 'Luxor', 'Mansoura', 'Tanta',
     'Qena', 'Sohag', 'Beni Suef', 'Minya', 'Assiut', 'Ismailia', 'Suez',
@@ -96,7 +96,7 @@ class Location{
   ]
 };
 
- final Map<String, List<String>> arabCountriesArabic = {
+ static final Map<String, List<String>> arabCountriesArabic = {
   'مصر': [
     'القاهرة', 'الجيزة', 'الإسكندرية', 'أسوان', 'الأقصر', 'المنصورة', 'طنطا',
     'قنا', 'سوهاج', 'بني سويف', 'المنيا', 'أسيوط', 'الإسماعيلية', 'السويس',
@@ -183,6 +183,52 @@ class Location{
     'غرووي'
   ]
 };
+
+/// Convert Arabic governorate name to English, given the Arabic country and Arabic governorate.
+  static String? englishGovernorateToArabic(String engCountry, String engGov) {
+  final engGovs = arabCountriesEnglish[engCountry];
+  final arabGovs = arabCountriesArabic[arabicCountryFromEnglish(engCountry)];
+
+  if (engGovs != null && arabGovs != null) {
+    final index = engGovs.indexOf(engGov);
+    if (index != -1 && index < arabGovs.length) {
+      return arabGovs[index];
+    }
+  }
+  return null;
+}
+
+
+  /// Convert Arabic country name to English country name
+  static String arabicCountryFromEnglish(String engCountry) {
+  const countryMap = {
+    'Egypt': 'مصر',
+    'Saudi Arabia': 'السعودية',
+    'UAE': 'الإمارات',
+    'Jordan': 'الأردن',
+    'Morocco': 'المغرب',
+    'Iraq': 'العراق',
+    'Syria': 'سوريا',
+    'Lebanon': 'لبنان',
+    'Palestine': 'فلسطين',
+    'Sudan': 'السودان',
+    'Algeria': 'الجزائر',
+    'Tunisia': 'تونس',
+    'Libya': 'ليبيا',
+    'Yemen': 'اليمن',
+    'Oman': 'عُمان',
+    'Qatar': 'قطر',
+    'Bahrain': 'البحرين',
+    'Kuwait': 'الكويت',
+    'Mauritania': 'موريتانيا',
+    'Comoros': 'جزر القمر',
+    'Djibouti': 'جيبوتي',
+    'Somalia': 'الصومال',
+  };
+
+  return countryMap[engCountry] ?? engCountry;
+}
+
 
 final Map<String, Coordinates> governorateCoordinates = {
   // Egypt 🇪🇬

@@ -32,6 +32,8 @@ dependencies:
   device_info_plus: ^9.0.0
   shared_preferences: 2.3.3
   flutter_compass: ^0.8.1
+  geolocator: ^13.0.2
+  geocoding: ^4.0.0
   
 
 flutter_launcher_icons:
@@ -61,6 +63,7 @@ flutter:
     - assets/zekr_background.jpg
     - assets/compass.jpg
     - assets/kaaba_icon.png
+    - assets/border.jpeg
 
   # fonts:
   #   - family: lateef

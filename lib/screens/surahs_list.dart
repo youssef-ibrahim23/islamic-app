@@ -21,6 +21,7 @@ class _QuranPageState extends State<QuranPage> {
   final TextEditingController _searchController = TextEditingController();
   bool isLoading = false;
   bool hasError = false;
+  bool isSearching = false;
   final Color primaryColor = const Color(0xFF8B0000);
   final Color accentColor = const Color(0xFFD4AF37);
   final Color backgroundColor = const Color(0xFFF5F5F5);
@@ -151,106 +152,6 @@ class _QuranPageState extends State<QuranPage> {
     ).then((_) => setState(() {}));
   }
 
-  Widget _buildSearchDialog() {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      child: Directionality(
-        textDirection: textDirection,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isEnglish ? "Search Surah" : "بحث عن سورة",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: primaryColor,
-                  fontFamily: fontFamily,
-                ),
-              ).animate().fadeIn(duration: 200.ms),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _searchController,
-                textAlign: isEnglish ? TextAlign.left : TextAlign.right,
-                decoration: InputDecoration(
-                  hintText: isEnglish ? "Enter Surah Name" : "أدخل اسم السورة",
-                  hintStyle: TextStyle(
-                    color: secondaryTextColor,
-                    fontFamily: fontFamily,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: primaryColor,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: primaryColor),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: primaryColor, width: 2),
-                  ),
-                ),
-                style: TextStyle(
-                  fontFamily: fontFamily,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      _searchController.clear();
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      isEnglish ? "Cancel" : "إلغاء",
-                      style: TextStyle(
-                        color: secondaryTextColor,
-                        fontFamily: fontFamily,
-                      ),
-                    ),
-                  ).animate().fadeIn(delay: 100.ms),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      isEnglish ? "Search" : "بحث",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: fontFamily,
-                      ),
-                    ),
-                  ).animate().fadeIn(delay: 200.ms),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ).animate().scaleXY(begin: 0.9),
-    );
-  }
-
   Widget _buildSurahItem(Chapter chapter, int index) {
     final isFavorite = favoriteSurahIds.containsKey(chapter.id);
     final surahNames = isFavorite
@@ -258,14 +159,20 @@ class _QuranPageState extends State<QuranPage> {
         : [chapter.nameSimple, chapter.nameArabic];
 
     final revelationPlace = (chapter.revelationPlace.toLowerCase() == "makkah")
-        ? (isEnglish ? "Makkah" : "مكة")
-        : (isEnglish ? "Madinah" : "المدينة");
+        ? (isEnglish ? "Makkeah" : "مكية")
+        : (isEnglish ? "Madaneah" : "مدينة");
 
-    return Globals.languageState! ? Directionality(
-      textDirection: isEnglish ? TextDirection.ltr : TextDirection.ltr,
+    final versesCountText = isEnglish
+        ? "${chapter.versesCount} verses"
+        : "${_toArabicNumber(chapter.versesCount.toString())} آيات";
+
+    final direction = isEnglish ? TextDirection.ltr : TextDirection.rtl;
+
+    return Directionality(
+      textDirection: direction,
       child: Card(
         elevation: 2,
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -273,42 +180,40 @@ class _QuranPageState extends State<QuranPage> {
           borderRadius: BorderRadius.circular(12),
           onTap: () => _navigateToSurahDetail(chapter),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
                 // Surah Number Circle
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    shape: BoxShape.circle,
                     border: Border.all(color: primaryColor.withOpacity(0.3)),
                   ),
                   child: Center(
                     child: Text(
-                      isEnglish 
+                      isEnglish
                           ? chapter.id.toString()
                           : _toArabicNumber(chapter.id.toString()),
                       style: TextStyle(
                         color: primaryColor,
                         fontWeight: FontWeight.bold,
+                        fontSize: 17,
                         fontFamily: fontFamily,
-                        fontSize: 17
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
+                // Surah Info
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: isEnglish 
-                        ? CrossAxisAlignment.start 
-                        : CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         isEnglish ? surahNames[0] : surahNames[1],
-                        textAlign: isEnglish ? TextAlign.right : TextAlign.right,
                         style: TextStyle(
                           color: textColor,
                           fontSize: 18,
@@ -316,108 +221,50 @@ class _QuranPageState extends State<QuranPage> {
                           fontFamily: fontFamily,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        revelationPlace,
-                        textAlign: isEnglish ? TextAlign.left : TextAlign.right,
-                        style: TextStyle(
-                          color: secondaryTextColor,
-                          fontSize: 16,
-                          fontFamily: fontFamily,
-                        ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.place,
+                            size: 14,
+                            color: secondaryTextColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            revelationPlace,
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 14,
+                              fontFamily: fontFamily,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.menu_book,
+                            size: 14,
+                            color: secondaryTextColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            versesCountText,
+                            style: TextStyle(
+                              color: secondaryTextColor,
+                              fontSize: 14,
+                              fontFamily: fontFamily,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+                // Favorite Button
                 IconButton(
                   icon: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
                     color: isFavorite ? primaryColor : secondaryTextColor,
                   ),
                   onPressed: () => _toggleFavorite(chapter),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ).animate().fadeIn(delay: (index * 1).ms).slideX(
-            begin: isEnglish ? -0.2 : 0.2,
-            curve: Curves.easeOut,
-          ),
-    ) : Directionality(
-      textDirection: isEnglish ? TextDirection.ltr : TextDirection.ltr,
-      child: Card(
-        elevation: 2,
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _navigateToSurahDetail(chapter),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ? primaryColor : secondaryTextColor,
-                  ),
-                  onPressed: () => _toggleFavorite(chapter),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: isEnglish 
-                        ? CrossAxisAlignment.start 
-                        : CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        isEnglish ? surahNames[0] : surahNames[1],
-                        textAlign: isEnglish ? TextAlign.right : TextAlign.right,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: fontFamily,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        revelationPlace,
-                        textAlign: isEnglish ? TextAlign.left : TextAlign.right,
-                        style: TextStyle(
-                          color: secondaryTextColor,
-                          fontSize: 16,
-                          fontFamily: fontFamily,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Surah Number Circle
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: primaryColor.withOpacity(0.3)),
-                  ),
-                  child: Center(
-                    child: Text(
-                      isEnglish 
-                          ? chapter.id.toString()
-                          : _toArabicNumber(chapter.id.toString()),
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: fontFamily,
-                        fontSize: 17
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -435,23 +282,76 @@ class _QuranPageState extends State<QuranPage> {
       automaticallyImplyLeading: false,
       backgroundColor: primaryColor,
       elevation: 0,
-      title: Text(
-        isEnglish ? "Al Quran" : "القرآن الكريم",
-        style: TextStyle(
-          fontFamily: fontFamily,
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 26,
-        ),
-      ).animate().fadeIn(duration: 300.ms),
+      title: isSearching
+          ? Directionality(
+            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            child: TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: fontFamily,
+                ),
+                decoration: InputDecoration(
+                  hintText: isEnglish ? "Search Surah..." : "ابحث عن سورة...",
+                  hintStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontFamily: fontFamily,
+                  ),
+                  border: InputBorder.none,
+                ),
+              ),
+          )
+          : Text(
+              isEnglish ? "Al Quran" : "القرآن الكريم",
+              style: TextStyle(
+                fontFamily: fontFamily,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 26,
+              ),
+            ).animate().fadeIn(duration: 300.ms),
       centerTitle: true,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const BottomBar()),
-        ),
-      ).animate().fadeIn(duration: 300.ms),
+      leading: isSearching
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  isSearching = false;
+                  _searchController.clear();
+                  filteredChapters = chapters;
+                });
+              },
+            )
+          : IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const BottomBar()),
+              ),
+            ).animate().fadeIn(duration: 300.ms),
+      actions: [
+        if (!isSearching)
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                isSearching = true;
+              });
+            },
+          ).animate().fadeIn(duration: 300.ms),
+        if (isSearching)
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () {
+              setState(() {
+                isSearching = false;
+                _searchController.clear();
+                filteredChapters = chapters;
+              });
+            },
+          ).animate().fadeIn(duration: 300.ms),
+      ],
     );
   }
 
@@ -549,14 +449,6 @@ class _QuranPageState extends State<QuranPage> {
         backgroundColor: backgroundColor,
         appBar: _buildAppBar(),
         body: _buildBody(),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: primaryColor,
-          onPressed: () => showDialog(
-            context: context,
-            builder: (context) => _buildSearchDialog(),
-          ),
-          child: const Icon(Icons.search, color: Colors.white),
-        ).animate().scale(delay: 500.ms),
       ),
     );
   }

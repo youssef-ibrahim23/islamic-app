@@ -10,6 +10,7 @@ import 'package:islamic_app/widgets/azkar/zekr_tab.dart';
 
 class AzkarCard extends StatelessWidget {
   final int index;
+  final String category; // ✅ This must be added
   final Azkar azkar;
   final int count;
   final VoidCallback onChanged;
@@ -17,6 +18,7 @@ class AzkarCard extends StatelessWidget {
   const AzkarCard({
     Key? key,
     required this.index,
+    required this.category, // ✅ Include in constructor
     required this.azkar,
     required this.count,
     required this.onChanged,
@@ -24,19 +26,20 @@ class AzkarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final current = Globals.currentCounts[index]!;
-    final completed = Globals.completionCounts[index]!;
+    // ✅ Correct
+final current = Globals.currentCounts[category]?[index] ?? count;
+final completed = Globals.completionCounts[category]?[index] ?? 0;
 
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         Card(
           margin: EdgeInsets.zero,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () {
-              ZekrTab.handleZikrTap(index, count);
+              ZekrTab.handleZikrTap(category, index, count); // <-- Category-aware tap
               onChanged();
             },
             child: Container(
@@ -72,36 +75,42 @@ class AzkarCard extends StatelessWidget {
                     const SizedBox(height: 16),
                     Reference(reference: azkar.reference),
                   ],
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 48), // Leave more space for the button
                 ],
               ),
             ),
           ),
         ),
+
+        // Floating + button
         Positioned(
-          bottom: 8,
-          left: 8,
-          child: InkWell(
-            onTap: () {
-              ZekrTab.handleZikrTap(index, count);
-              onChanged();
-            },
+          bottom: -12,
+          left: 12,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+            child: InkWell(
+              onTap: () {
+                ZekrTab.handleZikrTap(category, index, count); // <-- Category-aware tap
+                onChanged();
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 24),
               ),
-              child: const Icon(Icons.add, color: Colors.white, size: 24),
             ),
           ),
         ),

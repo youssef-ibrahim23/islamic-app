@@ -14,7 +14,7 @@ class LocationService {
     await prefs.setString('governorate', governorate);
 
     // Save coordinates if available
-    final Coordinates? coords = Location().governorateCoordinates[governorate];
+    final Coordinates? coords = Locations().governorateCoordinates[governorate];
     if (coords != null) {
       await prefs.setDouble('latitude', coords.latitude);
       await prefs.setDouble('longitude', coords.longitude);

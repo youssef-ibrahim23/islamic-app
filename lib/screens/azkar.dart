@@ -55,7 +55,7 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
     await AzkarService.initPrefs();
     final data = await AzkarService.loadAzkarData();
     setState(() {
-      azkarData = Future.value(data); // So it won't rebuild repeatedly
+      azkarData = Future.value(data);
     });
   }
 
@@ -95,9 +95,8 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
             color: primaryColor,
             width: double.infinity,
             child: Directionality(
-              textDirection: Globals.languageState!
-                  ? TextDirection.ltr
-                  : TextDirection.rtl,
+              textDirection:
+                  Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
@@ -140,15 +139,13 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
             ),
           ),
           child: azkarData == null
-              ? const Center(
-                  child: CircularProgressIndicator(color: primaryColor))
+              ? const Center(child: CircularProgressIndicator(color: primaryColor))
               : FutureBuilder<Map<String, List<Azkar>>>(
                   future: azkarData,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
-                          child:
-                              CircularProgressIndicator(color: primaryColor));
+                          child: CircularProgressIndicator(color: primaryColor));
                     } else if (snapshot.hasError) {
                       return Message(
                         text: Globals.languageState!
@@ -166,7 +163,7 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
                       return TabBarView(
                         controller: _tabController,
                         children: azkarKeys.map((key) {
-                          return AzkarList.buildAzkarList(data[key] ?? []);
+                          return AzkarList.buildAzkarList(key, data[key] ?? []);
                         }).toList(),
                       );
                     }
