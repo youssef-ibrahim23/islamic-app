@@ -46,9 +46,14 @@ class _AzkarListState extends State<AzkarList> {
         final displayCount = count == 1 ? 3 : count;
 
         // Pass a callback to update the state
-        return AzkarCard.buildAzkarCard(index, azkar, displayCount, () {
-          setState(() {});
-        });
+        return AzkarCard(
+          index: index,
+          azkar: azkar,
+          count: displayCount,
+          onChanged: () {
+            setState(() {});
+          },
+        );
       },
     );
   }

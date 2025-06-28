@@ -3,8 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class ZekrDescription {
-  static Widget buildDescription(String description) {
+class ZekrDescription extends StatelessWidget {
+  final String description;
+
+  const ZekrDescription({Key? key, required this.description}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

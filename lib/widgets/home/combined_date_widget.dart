@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class CombinedDateWidget {
-  static Widget buildCombinedDateWidget(
-      BuildContext context, String gregorianDate, String hijriDate) {
+class CombinedDateWidget extends StatelessWidget {
+  final String gregorianDate;
+  final String hijriDate;
+
+  const CombinedDateWidget({
+    Key? key,
+    required this.gregorianDate,
+    required this.hijriDate,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -30,9 +39,7 @@ class CombinedDateWidget {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  width: 11,
-                ),
+                const SizedBox(width: 11),
                 Container(
                   width: 1,
                   height: 30,

@@ -3,8 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class Reference{
-  static Widget buildReference(String reference) {
+class Reference extends StatelessWidget {
+  final String reference;
+
+  const Reference({Key? key, required this.reference}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Align(
       alignment: Globals.languageState! ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(

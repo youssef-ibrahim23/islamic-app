@@ -3,8 +3,18 @@ import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/hadith_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class RangeHeader {
-  static Widget buildRangeHeader(bool isEnglish, bool isPortrait) {
+class RangeHeader extends StatelessWidget {
+  final bool isEnglish;
+  final bool isPortrait;
+
+  const RangeHeader({
+    Key? key,
+    required this.isEnglish,
+    required this.isPortrait,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(isPortrait ? 12 : 16),
       decoration: BoxDecoration(
@@ -19,7 +29,9 @@ class RangeHeader {
       ),
       child: Center(
         child: Text(
-          '${isEnglish ? 'Showing' : 'عرض'} ${HadithService.convertNumbersToArabic(Globals.currentRangeStart.toString(), isEnglish)} - ${HadithService.convertNumbersToArabic(Globals.currentRangeEnd.toString(), isEnglish)}',
+          '${isEnglish ? 'Showing' : 'عرض'} '
+          '${HadithService.convertNumbersToArabic(Globals.currentRangeStart.toString(), isEnglish)} - '
+          '${HadithService.convertNumbersToArabic(Globals.currentRangeEnd.toString(), isEnglish)}',
           style: TextStyle(
             color: primaryColor,
             fontSize: isPortrait ? 18 : 20,

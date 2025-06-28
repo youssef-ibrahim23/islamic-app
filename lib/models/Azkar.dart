@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-
 class Azkar {
   final String category;
   final String count;
@@ -31,30 +28,5 @@ class Azkar {
         "reference": reference,
         "content": content,
       };
-
-  static Future<Map<String, List<Azkar>>> loadLocalAzkar() async {
-  try {
-    final String response = await rootBundle.loadString('assets/Azkar.JSON');
-    final Map<String, dynamic> data = json.decode(response);
-
-    Map<String, List<Azkar>> azkarCategories = {};
-
-    data.forEach((key, value) {
-      if (value is List) {
-        List<Azkar> azkarList = value
-            .whereType<Map<String, dynamic>>()
-            .map((item) => Azkar.fromJson(item))
-            .toList();
-
-        azkarCategories[key] = azkarList;
-      }
-    });
-
-    return azkarCategories;
-  } catch (e) {
-    print("Error loading local azkar: $e");
-    return {};
-  }
-}
 
 }

@@ -2,9 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class CategoryItem {
-  static Widget buildCategoryItem(
-      BuildContext context, IconData icon, String label, Widget page) {
+class CategoryItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Widget page;
+
+  const CategoryItem({
+    Key? key,
+    required this.icon,
+    required this.label,
+    required this.page,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
 
     return InkWell(

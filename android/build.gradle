@@ -1,12 +1,11 @@
 buildscript {
-    ext.kotlin_version = '1.9.22' // ✅ Compatible Kotlin version
+    ext.kotlin_version = '1.9.22'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        // ✅ No Firebase or Google services classpath here
     }
 }
 

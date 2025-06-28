@@ -1,10 +1,31 @@
 // lib/services/hadith_service.dart
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:islamic_app/models/hadith.dart';
 import 'package:islamic_app/globals.dart';
 
 class HadithService {
+
+static Future<List<Hadith>> loadHadithsByRange(int start, int end) async {
+    try {
+      final String response = await rootBundle.loadString('assets/Ahadith.JSON');
+      final data = json.decode(response);
+      final welcome = Welcome.fromJson(data);
+      
+      // Filter hadiths within the requested range
+      return welcome.data.hadiths.where((hadith) => 
+        hadith.number >= start && hadith.number <= end
+      ).toList();
+    } catch (e) {
+      print("Error loading hadiths by range: $e");
+      return [];
+    }
+  }
+
+  
   static Future<void> loadInitialRange(Function(bool) setLoading, Function() refreshUI) async {
     final prefs = await SharedPreferences.getInstance();
     Globals.currentRangeStart = prefs.getInt("bukhari_range_start") ?? 1;
@@ -15,7 +36,7 @@ class HadithService {
   static Future<void> loadHadiths(int start, int end, Function(bool) setLoading, Function() refreshUI) async {
     setLoading(true);
     try {
-      final List<Hadith> hadiths = await Hadith.loadHadithsByRange(start, end);
+      final List<Hadith> hadiths = await loadHadithsByRange(start, end);
       Globals.hadiths = hadiths;
     } catch (e) {
       Globals.hadiths = [];

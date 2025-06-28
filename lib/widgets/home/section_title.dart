@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class SectionTitle {
-  static Widget buildSectionTitle(BuildContext context, String title) {
+class SectionTitle extends StatelessWidget {
+  final String title;
+
+  const SectionTitle({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment:
           Globals.languageState! ? MainAxisAlignment.start : MainAxisAlignment.end,

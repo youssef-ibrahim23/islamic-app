@@ -95,8 +95,9 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
             color: primaryColor,
             width: double.infinity,
             child: Directionality(
-              textDirection:
-                  Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+              textDirection: Globals.languageState!
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
               child: TabBar(
                 controller: _tabController,
                 isScrollable: true,
@@ -139,21 +140,27 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
             ),
           ),
           child: azkarData == null
-              ? const Center(child: CircularProgressIndicator(color: primaryColor))
+              ? const Center(
+                  child: CircularProgressIndicator(color: primaryColor))
               : FutureBuilder<Map<String, List<Azkar>>>(
                   future: azkarData,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
-                          child: CircularProgressIndicator(color: primaryColor));
+                          child:
+                              CircularProgressIndicator(color: primaryColor));
                     } else if (snapshot.hasError) {
-                      return Message.buildMessage(Globals.languageState!
-                          ? 'Error loading azkar'
-                          : 'خطأ في تحميل الأذكار');
+                      return Message(
+                        text: Globals.languageState!
+                            ? 'Error loading azkar'
+                            : 'خطأ في تحميل الأذكار',
+                      );
                     } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Message.buildMessage(Globals.languageState!
-                          ? 'No azkar available'
-                          : 'لا توجد أذكار متاحة');
+                      return Message(
+                        text: Globals.languageState!
+                            ? 'No azkar available'
+                            : 'لا توجد أذكار متاحة',
+                      );
                     } else {
                       final data = snapshot.data!;
                       return TabBarView(

@@ -2,14 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class SettingCard{
-  static Widget buildSettingsCard({
-    required String title,
-    required IconData icon,
-    required List<Widget> children,
-    required Size size,
-    required bool isPortrait,
-  }) {
+class SettingCardWidget extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+  final Size size;
+  final bool isPortrait;
+
+  const SettingCardWidget({
+    Key? key,
+    required this.title,
+    required this.icon,
+    required this.children,
+    required this.size,
+    required this.isPortrait,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(
@@ -50,7 +60,8 @@ class SettingCard{
                       color: textColor,
                       fontSize: isPortrait ? 20 : 18,
                       fontWeight: FontWeight.w600,
-                      fontFamily: Globals.languageState! ? 'Roboto' : 'Tajawal',
+                      fontFamily:
+                          Globals.languageState! ? 'Roboto' : 'Tajawal',
                     ),
                   ),
                 ],

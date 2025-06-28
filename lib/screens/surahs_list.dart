@@ -4,8 +4,8 @@ import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/models/surah.dart';
 import 'package:islamic_app/screens/bottom_bar.dart';
 import 'package:islamic_app/screens/verses.dart';
+import 'package:islamic_app/services/surahs_list_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 class QuranPage extends StatefulWidget {
   const QuranPage({super.key});
@@ -54,7 +54,7 @@ class _QuranPageState extends State<QuranPage> {
     });
 
     try {
-      final data = await QuranChapters.loadLocalChapters();
+      final data = await SurahsListServices.loadLocalChapters();
       setState(() {
         chapters = data.chapters;
         filteredChapters = data.chapters;

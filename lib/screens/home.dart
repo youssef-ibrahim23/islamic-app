@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
     HomeServices.loadLastSurah((id, name) {
       setState(() {
-      Globals.surahId = id;
+        Globals.surahId = id;
         Globals.currentSora = name;
       });
     });
@@ -166,74 +166,77 @@ class _HomePageState extends State<HomePage> with RouteAware {
               children: [
                 SizedBox(height: screenHeight * 0.09),
                 // Combined Date Widget
-               CombinedDateWidget.buildCombinedDateWidget(
-                        context, currentDate, currentHijriDate)
-                    .animate()
-                    .fadeIn(duration: 500.ms)
-                    .slideY(begin: -0.2),
+                CombinedDateWidget(
+                  gregorianDate: currentDate,
+                  hijriDate: currentHijriDate,
+                ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
+
                 SizedBox(height: screenHeight * 0.05),
                 // Daily Ayat Card
-               DailyAyatCard.buildDailyAyatCard(context)
+                const DailyAyatCard()
                     .animate()
                     .fadeIn(duration: 600.ms)
                     .slideY(begin: 0.2),
+
                 SizedBox(height: screenHeight * 0.05),
                 // Categories Section
-               SectionTitle.buildSectionTitle(
-                        context, Globals.languageState! ? "Categories" : "الفئات")
+                SectionTitle(
+                  title: Globals.languageState! ? "Categories" : "الفئات",
+                )
                     .animate()
                     .fadeIn(duration: 700.ms)
                     .slideX(begin: Globals.languageState! ? -0.2 : 0.2),
+
                 SizedBox(height: screenHeight * 0.04),
                 // First Row of Categories
-               CategoryRow.buildCategoryRow(context, [
-                 CategoryItem.buildCategoryItem(
-                    context,
-                    FontAwesomeIcons.bookQuran,
-                    Globals.languageState! ? "Quran" : "القرآن",
-                    const QuranPage(),
-                  ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.3),
-                  CategoryItem.buildCategoryItem(
-                    context,
-                    FontAwesomeIcons.handsPraying,
-                    Globals.languageState! ? "Azkar" : "الأذكار",
-                    const AzkarPage(),
-                  ).animate().fadeIn(duration: 900.ms).slideY(begin: 0.3),
-                  CategoryItem.buildCategoryItem(
-                    context,
-                    FontAwesomeIcons.mosque,
-                    Globals.languageState! ? "Prayers" : "الصلاة",
-                    const PrayerTimesPage(),
-                  ).animate().fadeIn(duration: 1000.ms).slideY(begin: 0.3),
-                ]),
+                CategoryRow(
+                  items: [
+                    CategoryItem(
+                      icon: FontAwesomeIcons.bookQuran,
+                      label: Globals.languageState! ? "Quran" : "القرآن",
+                      page: const QuranPage(),
+                    ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.3),
+                    CategoryItem(
+                      icon: FontAwesomeIcons.handsPraying,
+                      label: Globals.languageState! ? "Azkar" : "الأذكار",
+                      page: const AzkarPage(),
+                    ).animate().fadeIn(duration: 900.ms).slideY(begin: 0.3),
+                    CategoryItem(
+                      icon: FontAwesomeIcons.mosque,
+                      label: Globals.languageState! ? "Prayers" : "الصلاة",
+                      page: const PrayerTimesPage(),
+                    ).animate().fadeIn(duration: 1000.ms).slideY(begin: 0.3),
+                  ],
+                ),
                 SizedBox(height: screenHeight * 0.03),
-                // Second Row of Categories
-                CategoryRow.buildCategoryRow(context, [
-                  CategoryItem.buildCategoryItem(
-                    context,
-                    FontAwesomeIcons.kaaba,
-                    Globals.languageState! ? "Counter" : "التسبيح",
-                    const Counter(),
-                  ).animate().fadeIn(duration: 1100.ms).slideY(begin: 0.3),
-                  CategoryItem.buildCategoryItem(
-                    context,
-                    FontAwesomeIcons.calendarDays,
-                    Globals.languageState! ? "Calendar" : "التقويم",
-                    const EnhancedCalendar(),
-                  ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3),
-                  CategoryItem.buildCategoryItem(
-                    context,
-                    FontAwesomeIcons.bookOpen,
-                    Globals.languageState! ? "Ahadith" : "الأحاديث",
-                    const HadithScreen(),
-                  ).animate().fadeIn(duration: 1300.ms).slideY(begin: 0.3),
-                ]),
+
+                CategoryRow(
+                  items: [
+                    CategoryItem(
+                      icon: FontAwesomeIcons.kaaba,
+                      label: Globals.languageState! ? "Counter" : "التسبيح",
+                      page: const Counter(),
+                    ).animate().fadeIn(duration: 1100.ms).slideY(begin: 0.3),
+                    CategoryItem(
+                      icon: FontAwesomeIcons.calendarDays,
+                      label: Globals.languageState! ? "Calendar" : "التقويم",
+                      page: const EnhancedCalendar(),
+                    ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3),
+                    CategoryItem(
+                      icon: FontAwesomeIcons.bookOpen,
+                      label: Globals.languageState! ? "Ahadith" : "الأحاديث",
+                      page: const HadithScreen(),
+                    ).animate().fadeIn(duration: 1300.ms).slideY(begin: 0.3),
+                  ],
+                ),
+
                 SizedBox(height: screenHeight * 0.03),
                 // Compass Widget
-                Compasswidget.buildCompassWidget(context)
+                const CompassWidget()
                     .animate()
                     .fadeIn(duration: 1400.ms)
                     .slideY(begin: 0.3),
+
                 SizedBox(height: screenHeight * 0.05),
               ],
             ),

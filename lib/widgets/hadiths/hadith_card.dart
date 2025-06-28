@@ -4,9 +4,20 @@ import 'package:islamic_app/models/hadith.dart';
 import 'package:islamic_app/services/hadith_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class HadithCard {
-  static Widget buildHadithCard(
-      Hadith hadith, bool isEnglish, bool isPortrait) {
+class HadithCard extends StatelessWidget {
+  final Hadith hadith;
+  final bool isEnglish;
+  final bool isPortrait;
+
+  const HadithCard({
+    Key? key,
+    required this.hadith,
+    required this.isEnglish,
+    required this.isPortrait,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -56,7 +67,7 @@ class HadithCard {
               ),
             ),
             SizedBox(height: isPortrait ? 12 : 16),
-            // Reference section
+            // You can add more content like translation or reference here
           ],
         ),
       ),

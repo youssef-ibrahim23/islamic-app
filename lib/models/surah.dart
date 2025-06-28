@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-
 class QuranChapters {
   final List<Chapter> chapters;
 
@@ -16,17 +13,6 @@ class QuranChapters {
   Map<String, dynamic> toJson() => {
         "chapters": List<dynamic>.from(chapters.map((x) => x.toJson())),
       };
-
-  static Future<QuranChapters> loadLocalChapters() async {
-    try {
-      final String response = await rootBundle.loadString('assets/Quran.JSON');
-      final Map<String, dynamic> data = json.decode(response);
-      return QuranChapters.fromJson(data);
-    } catch (e) {
-      print("Error loading local chapters: $e");
-      throw Exception("Failed to load chapters");
-    }
-  }
 }
 
 class Chapter {

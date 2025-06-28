@@ -113,13 +113,13 @@ class _MoreState extends State<More> {
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Column(
                     children: [
-                      SettingCard.buildSettingsCard(
+                      SettingCardWidget(
                         title: isEnglish ? 'Language' : 'اللغة',
                         icon: Icons.translate,
+                        size: size,
+                        isPortrait: isPortrait,
                         children: [
-                          const SizedBox(
-                            height: 10,
-                          ),
+                          const SizedBox(height: 10),
                           Padding(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 12, vertical: 8),
@@ -131,16 +131,16 @@ class _MoreState extends State<More> {
                             ),
                           ),
                         ],
-                        size: size,
-                        isPortrait: isPortrait,
                       ).animate().fadeIn().slideY(
                             begin: 0.2,
                             curve: Curves.easeOutQuad,
                           ),
                       const SizedBox(height: 16),
-                      SettingCard.buildSettingsCard(
+                      SettingCardWidget(
                         title: isEnglish ? 'Connect with us' : 'تواصل معنا',
                         icon: Icons.contact_support_rounded,
+                        size: size,
+                        isPortrait: isPortrait,
                         children: [
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -157,23 +157,23 @@ class _MoreState extends State<More> {
                                   ),
                                 ),
                                 const SizedBox(height: 16),
-                               SocialMediaLinkes.buildSocialMediaLinks(size, isPortrait , context),
+                                const SocialMediaLinksWidget(),
                               ],
                             ),
                           ),
                         ],
-                        size: size,
-                        isPortrait: isPortrait,
                       ).animate().fadeIn(delay: 100.ms).slideY(
                             begin: 0.2,
                             curve: Curves.easeOutQuad,
                           ),
                       const SizedBox(height: 16),
-                      SettingCard.buildSettingsCard(
+                      SettingCardWidget(
                         title: isEnglish ? 'About' : 'حول التطبيق',
                         icon: Icons.info_outline_rounded,
+                        size: size,
+                        isPortrait: isPortrait,
                         children: [
-                          SettingItem.buildSettingItem(
+                          SettingItemWidget(
                             icon: Icons.app_registration,
                             title: isEnglish ? 'App Version' : 'إصدار التطبيق',
                             subtitle: isEnglish
@@ -198,8 +198,6 @@ class _MoreState extends State<More> {
                             ),
                           ),
                         ],
-                        size: size,
-                        isPortrait: isPortrait,
                       ).animate().fadeIn(delay: 200.ms).slideY(
                             begin: 0.2,
                             curve: Curves.easeOutQuad,

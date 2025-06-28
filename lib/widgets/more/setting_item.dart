@@ -2,14 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class SettingItem{
-  static Widget buildSettingItem({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    Widget? trailing,
-    VoidCallback? onTap,
-  }) {
+class SettingItemWidget extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const SettingItemWidget({
+    Key? key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
@@ -30,7 +40,7 @@ class SettingItem{
       ),
       subtitle: subtitle != null
           ? Text(
-              subtitle,
+              subtitle!,
               style: TextStyle(
                 color: secondaryTextColor,
                 fontSize: 12,

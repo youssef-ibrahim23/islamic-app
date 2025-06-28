@@ -3,8 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class CustomChip  {
-  static Widget buildChip({required String label, IconData? icon}) {
+class CustomChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+
+  const CustomChip({
+    Key? key,
+    required this.label,
+    this.icon,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(

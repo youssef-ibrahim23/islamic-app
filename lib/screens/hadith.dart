@@ -19,10 +19,7 @@ class HadithScreen extends StatefulWidget {
 final ScrollController _scrollController = ScrollController();
 
 class _HadithScreenState extends State<HadithScreen> {
-
-  
-
-    @override
+  @override
   void initState() {
     super.initState();
     HadithService.loadInitialRange(_setLoading, _refreshUI);
@@ -36,7 +33,6 @@ class _HadithScreenState extends State<HadithScreen> {
     setState(() {});
     _scrollController.jumpTo(0); // Optional
   }
-
 
   @override
   void dispose() {
@@ -75,18 +71,17 @@ class _HadithScreenState extends State<HadithScreen> {
             fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
           ),
         ),
-        
       ),
       body: Directionality(
-      textDirection:  TextDirection.rtl,child: _buildBody(isEnglish, size, isPortrait)),
+          textDirection: TextDirection.rtl,
+          child: _buildBody(isEnglish, size, isPortrait)),
       bottomNavigationBar: Directionality(
-  textDirection: TextDirection.rtl,
-  child: NavigationButtons(
-    isEnglish: isEnglish,
-    onHadithsLoaded: _refreshUI,
-  ),
-),
-
+        textDirection: TextDirection.rtl,
+        child: NavigationButtons(
+          isEnglish: isEnglish,
+          onHadithsLoaded: _refreshUI,
+        ),
+      ),
     );
   }
 
@@ -103,7 +98,9 @@ class _HadithScreenState extends State<HadithScreen> {
     if (Globals.hadiths.isEmpty) {
       return Center(
         child: Text(
-          isEnglish ? 'No hadiths in this range' : 'لا توجد أحاديث في هذا النطاق',
+          isEnglish
+              ? 'No hadiths in this range'
+              : 'لا توجد أحاديث في هذا النطاق',
           style: TextStyle(
             color: secondaryTextColor,
             fontSize: isPortrait ? size.width * 0.05 : size.height * 0.05,
@@ -115,15 +112,17 @@ class _HadithScreenState extends State<HadithScreen> {
 
     return Container(
       decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/background.jpg'),
-          fit: BoxFit.cover,
-          opacity: 0.9,
-        )
-      ),
+          image: DecorationImage(
+        image: AssetImage('assets/background.jpg'),
+        fit: BoxFit.cover,
+        opacity: 0.9,
+      )),
       child: Column(
         children: [
-          RangeHeader.buildRangeHeader(isEnglish, isPortrait),
+          RangeHeader(
+            isEnglish: isEnglish,
+            isPortrait: isPortrait,
+          ),
           Expanded(
             child: ListView.separated(
               controller: _scrollController,
@@ -132,7 +131,11 @@ class _HadithScreenState extends State<HadithScreen> {
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final hadith = Globals.hadiths[index];
-                return HadithCard.buildHadithCard(hadith, isEnglish, isPortrait);
+                return HadithCard(
+                  hadith: hadith,
+                  isEnglish: isEnglish,
+                  isPortrait: isPortrait,
+                );
               },
             ),
           ),
@@ -140,7 +143,4 @@ class _HadithScreenState extends State<HadithScreen> {
       ),
     );
   }
-
-
-
 }

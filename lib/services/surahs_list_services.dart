@@ -1,6 +1,9 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/models/surah.dart';
 import 'package:islamic_app/screens/verses.dart';
@@ -8,6 +11,17 @@ import 'package:islamic_app/widgets/surahs/error_snack_bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SurahsListServices {
+
+    static Future<QuranChapters> loadLocalChapters() async {
+    try {
+      final String response = await rootBundle.loadString('assets/Quran.JSON');
+      final Map<String, dynamic> data = json.decode(response);
+      return QuranChapters.fromJson(data);
+    } catch (e) {
+      print("Error loading local chapters: $e");
+      throw Exception("Failed to load chapters");
+    }
+  }
   /// Save the last opened Surah info in SharedPreferences
   static Future<void> saveLastSurah(Chapter chapter) async {
     Globals.currentSora = Globals.languageState! ? chapter.nameSimple : chapter.nameArabic;
@@ -55,7 +69,7 @@ class SurahsListServices {
   static Future<List<Chapter>> loadChaptersWithResult(
       BuildContext context) async {
     try {
-      final data = await QuranChapters.loadLocalChapters();
+      final data = await loadLocalChapters();
       return data.chapters;
     } catch (e) {
       ErrorSnackBar.show(

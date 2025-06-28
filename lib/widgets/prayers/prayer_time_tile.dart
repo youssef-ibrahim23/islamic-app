@@ -3,16 +3,27 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/prayer_times_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
+import 'package:islamic_app/widgets/prayers/prayer_icon.dart';
 import 'dart:ui' as ui;
 
-import 'package:islamic_app/widgets/prayers/prayer_icon.dart';
+class PrayerTimeTileWidget extends StatelessWidget {
+  final String prayerName;
+  final String prayerTime;
 
-class PrayerTimeTile{
+  const PrayerTimeTileWidget({
+    Key? key,
+    required this.prayerName,
+    required this.prayerTime,
+  }) : super(key: key);
 
-  static Widget buildPrayerTimeTile(String prayerName, String prayerTime) {
+  @override
+  Widget build(BuildContext context) {
     final isCurrentPrayer = prayerName == Globals.nextPrayer;
-    final convertedTime = PrayerTimesService.convertTo12HourFormat(prayerTime);
-    final displayTime = Globals.languageState! ? convertedTime : Globals.toArabicNumber(convertedTime);
+    final convertedTime =
+        PrayerTimesService.convertTo12HourFormat(prayerTime);
+    final displayTime = Globals.languageState!
+        ? convertedTime
+        : Globals.toArabicNumber(convertedTime);
     final arabicName = PrayerTimesService.getArabicPrayerName(prayerName);
 
     return Container(
@@ -33,7 +44,9 @@ class PrayerTimeTile{
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
-              textDirection: Globals.languageState! ? ui.TextDirection.ltr : ui.TextDirection.rtl,
+              textDirection: Globals.languageState!
+                  ? ui.TextDirection.ltr
+                  : ui.TextDirection.rtl,
               children: [
                 // Prayer Icon
                 Container(
@@ -41,31 +54,32 @@ class PrayerTimeTile{
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isCurrentPrayer 
-                        ? primaryColor.withOpacity(0.1) 
+                    color: isCurrentPrayer
+                        ? primaryColor.withOpacity(0.1)
                         : Colors.grey.shade100,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
-                      )
+                      ),
                     ],
                   ),
                   child: Icon(
                     PrayerIcon.getPrayerIcon(prayerName),
-                    color: isCurrentPrayer ? primaryColor : Colors.grey.shade700,
+                    color:
+                        isCurrentPrayer ? primaryColor : Colors.grey.shade700,
                     size: 20,
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 // Prayer Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: Globals.languageState!
-                        ? CrossAxisAlignment.start 
+                        ? CrossAxisAlignment.start
                         : CrossAxisAlignment.end,
                     children: [
                       Text(
@@ -83,19 +97,20 @@ class PrayerTimeTile{
                         style: GoogleFonts.robotoMono(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: isCurrentPrayer 
-                              ? primaryColor.withOpacity(0.8) 
+                          color: isCurrentPrayer
+                              ? primaryColor.withOpacity(0.8)
                               : textColor.withOpacity(0.8),
                         ),
                       ),
                     ],
                   ),
                 ),
-                
+
                 // Current Prayer Indicator
                 if (isCurrentPrayer)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),

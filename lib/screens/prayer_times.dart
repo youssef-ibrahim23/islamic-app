@@ -1,5 +1,6 @@
 // ignore_for_file: equal_keys_in_map
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:islamic_app/screens/bottom_bar.dart';
@@ -18,10 +19,19 @@ class PrayerTimesPage extends StatefulWidget {
 }
 
 class _PrayerTimesPageState extends State<PrayerTimesPage> {
+  late Timer _localTimer;
+
   @override
   void initState() {
     super.initState();
+
+    // Load prayer times and trigger rebuild when loaded
     PrayerTimesService.checkLocationAndNavigate(context, () {
+      if (mounted) setState(() {});
+    });
+
+    // UI refresh timer for countdown
+    _localTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
 
@@ -32,7 +42,8 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
   @override
   void dispose() {
-    Globals.timer?.cancel();
+    Globals.timer?.cancel(); // Cancel global countdown timer
+    _localTimer.cancel();    // Cancel local UI refresh timer
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
     super.dispose();
   }
@@ -56,8 +67,8 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         systemOverlayStyle: SystemUiOverlayStyle.light,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (context) => const BottomBar())),
+          onPressed: () => Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => const BottomBar())),
         ),
         backgroundColor: primaryColor,
         elevation: 0,
@@ -85,27 +96,23 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
         ],
       ),
       body: Globals.prayerTimesIsLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: primaryColor),
-            )
+          ? const Center(child: CircularProgressIndicator(color: primaryColor))
           : Container(
               decoration: BoxDecoration(
-                  image: DecorationImage(
-                      image: Image.asset("assets/background.jpg").image,
-                      fit: BoxFit.cover)),
+                image: DecorationImage(
+                  image: Image.asset("assets/background.jpg").image,
+                  fit: BoxFit.cover,
+                ),
+              ),
               child: Column(
                 children: [
-                  // Next Prayer Card - Enhanced
+                  // Next Prayer Card
                   Container(
                     margin: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: const AssetImage("assets/prayer.jpg"),
+                      image: const DecorationImage(
+                        image: AssetImage("assets/prayer.jpg"),
                         fit: BoxFit.cover,
-                        colorFilter: ColorFilter.mode(
-                          Colors.black.withOpacity(0.3),
-                          BlendMode.darken,
-                        ),
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -125,33 +132,30 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           if (Globals.currentLocation != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.location_on,
-                                      color: Colors.white70, size: 16),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      Globals.currentLocation!,
-                                      style: GoogleFonts.getFont(
-                                        Globals.languageState!
-                                            ? 'Roboto'
-                                            : 'Tajawal',
-                                        color: Colors.white70,
-                                        fontSize: screenWidth * 0.035,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.location_on,
+                                    color: Colors.white70, size: 16),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    Globals.currentLocation!,
+                                    style: GoogleFonts.getFont(
+                                      Globals.languageState!
+                                          ? 'Roboto'
+                                          : 'Tajawal',
+                                      color: Colors.white70,
+                                      fontSize: screenWidth * 0.035,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
+                          const SizedBox(height: 10),
                           Text(
                             Globals.languageState!
                                 ? "Next Prayer"
@@ -225,6 +229,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                       ),
                     ),
                   ),
+
                   // Prayer Times List
                   Expanded(
                     child: Container(
@@ -246,18 +251,30 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                         child: Column(
                           children: [
                             if (Globals.prayerTimes != null) ...[
-                              PrayerTimeTile.buildPrayerTimeTile(
-                                  'Fajr', Globals.prayerTimes!['Fajr']!),
-                              PrayerTimeTile.buildPrayerTimeTile(
-                                  'Sunrise', Globals.prayerTimes!['Sunrise']!),
-                              PrayerTimeTile.buildPrayerTimeTile(
-                                  'Dhuhr', Globals.prayerTimes!['Dhuhr']!),
-                              PrayerTimeTile.buildPrayerTimeTile(
-                                  'Asr', Globals.prayerTimes!['Asr']!),
-                              PrayerTimeTile.buildPrayerTimeTile(
-                                  'Maghrib', Globals.prayerTimes!['Maghrib']!),
-                              PrayerTimeTile.buildPrayerTimeTile(
-                                  'Isha', Globals.prayerTimes!['Isha']!),
+                              PrayerTimeTileWidget(
+                                prayerName: 'Fajr',
+                                prayerTime: Globals.prayerTimes!['Fajr']!,
+                              ),
+                              PrayerTimeTileWidget(
+                                prayerName: 'Sunrise',
+                                prayerTime: Globals.prayerTimes!['Sunrise']!,
+                              ),
+                              PrayerTimeTileWidget(
+                                prayerName: 'Dhuhr',
+                                prayerTime: Globals.prayerTimes!['Dhuhr']!,
+                              ),
+                              PrayerTimeTileWidget(
+                                prayerName: 'Asr',
+                                prayerTime: Globals.prayerTimes!['Asr']!,
+                              ),
+                              PrayerTimeTileWidget(
+                                prayerName: 'Maghrib',
+                                prayerTime: Globals.prayerTimes!['Maghrib']!,
+                              ),
+                              PrayerTimeTileWidget(
+                                prayerName: 'Isha',
+                                prayerTime: Globals.prayerTimes!['Isha']!,
+                              ),
                             ],
                           ],
                         ),

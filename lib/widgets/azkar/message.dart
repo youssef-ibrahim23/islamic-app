@@ -3,8 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class Message{
-  static Widget buildMessage(String text) {
+class Message extends StatelessWidget {
+  final String text;
+
+  const Message({Key? key, required this.text}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Text(
         text,

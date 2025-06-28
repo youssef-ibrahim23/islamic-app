@@ -3,8 +3,11 @@ import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/screens/verses.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
-class DailyAyatCard {
-  static Widget buildDailyAyatCard(BuildContext context) {
+class DailyAyatCard extends StatelessWidget {
+  const DailyAyatCard({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
 
     return InkWell(
@@ -12,8 +15,11 @@ class DailyAyatCard {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                SurahDetailPage(Globals.currentSora, Globals.surahId, Globals.currentSora),
+            builder: (context) => SurahDetailPage(
+              Globals.currentSora,
+              Globals.surahId,
+              Globals.currentSora,
+            ),
           ),
         );
       },
@@ -43,7 +49,6 @@ class DailyAyatCard {
                     Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
                 child: Column(
                   children: [
-                    // Ayah text
                     Container(
                       padding: const EdgeInsets.symmetric(
                           vertical: 16, horizontal: 16),
@@ -61,10 +66,7 @@ class DailyAyatCard {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Sora name with directional icon
                     Row(
                       mainAxisAlignment: Globals.languageState!
                           ? MainAxisAlignment.end
@@ -72,11 +74,8 @@ class DailyAyatCard {
                       children: Globals.languageState!
                           ? [
                               const SizedBox(width: 10),
-                              const Icon(
-                                Icons.arrow_back_ios,
-                                size: 16,
-                                color: accentColor,
-                              ),
+                              const Icon(Icons.arrow_back_ios,
+                                  size: 16, color: accentColor),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 6, horizontal: 12),
@@ -88,8 +87,9 @@ class DailyAyatCard {
                                   Globals.currentSora,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontFamily:
-                                        Globals.languageState! ? 'Roboto' : 'Tajawal',
+                                    fontFamily: Globals.languageState!
+                                        ? 'Roboto'
+                                        : 'Tajawal',
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -108,19 +108,17 @@ class DailyAyatCard {
                                   Globals.currentSora,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontFamily:
-                                        Globals.languageState! ? 'Roboto' : 'Tajawal',
+                                    fontFamily: Globals.languageState!
+                                        ? 'Roboto'
+                                        : 'Tajawal',
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: accentColor,
-                              ),
+                              const Icon(Icons.arrow_forward_ios,
+                                  size: 16, color: accentColor),
                             ],
                     ),
                   ],

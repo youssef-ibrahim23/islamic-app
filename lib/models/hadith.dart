@@ -23,22 +23,6 @@ class Hadith {
         "arab": arab,
         "id": id,
       };
-
-  static Future<List<Hadith>> loadHadithsByRange(int start, int end) async {
-    try {
-      final String response = await rootBundle.loadString('assets/Ahadith.JSON');
-      final data = json.decode(response);
-      final welcome = Welcome.fromJson(data);
-      
-      // Filter hadiths within the requested range
-      return welcome.data.hadiths.where((hadith) => 
-        hadith.number >= start && hadith.number <= end
-      ).toList();
-    } catch (e) {
-      print("Error loading hadiths by range: $e");
-      return [];
-    }
-  }
 }
 
 class Welcome {

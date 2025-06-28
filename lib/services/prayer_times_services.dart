@@ -70,8 +70,7 @@ class PrayerTimesService {
       };
 
       Globals.prayerTimesIsLoading = false;
-      _calculateNextPrayer(prayerTimes);
-      onStateChanged();
+      _calculateAndStartCountdown(prayerTimes, onStateChanged);
     } catch (_) {
       Globals.prayerTimesIsLoading = false;
       Globals.nextPrayer = Globals.languageState! ? "Error" : "خطأ";
@@ -81,28 +80,28 @@ class PrayerTimesService {
     }
   }
 
-  static void _calculateNextPrayer(PrayerTimes times) {
+  static void _calculateAndStartCountdown(PrayerTimes prayerTimes, VoidCallback onStateChanged) {
     final now = DateTime.now();
     DateTime next;
     String name;
 
-    if (now.isBefore(times.fajr)) {
-      next = times.fajr;
+    if (now.isBefore(prayerTimes.fajr)) {
+      next = prayerTimes.fajr;
       name = 'Fajr';
-    } else if (now.isBefore(times.sunrise)) {
-      next = times.sunrise;
+    } else if (now.isBefore(prayerTimes.sunrise)) {
+      next = prayerTimes.sunrise;
       name = 'Sunrise';
-    } else if (now.isBefore(times.dhuhr)) {
-      next = times.dhuhr;
+    } else if (now.isBefore(prayerTimes.dhuhr)) {
+      next = prayerTimes.dhuhr;
       name = 'Dhuhr';
-    } else if (now.isBefore(times.asr)) {
-      next = times.asr;
+    } else if (now.isBefore(prayerTimes.asr)) {
+      next = prayerTimes.asr;
       name = 'Asr';
-    } else if (now.isBefore(times.maghrib)) {
-      next = times.maghrib;
+    } else if (now.isBefore(prayerTimes.maghrib)) {
+      next = prayerTimes.maghrib;
       name = 'Maghrib';
-    } else if (now.isBefore(times.isha)) {
-      next = times.isha;
+    } else if (now.isBefore(prayerTimes.isha)) {
+      next = prayerTimes.isha;
       name = 'Isha';
     } else {
       final tomorrow = now.add(const Duration(days: 1));
@@ -120,34 +119,53 @@ class PrayerTimesService {
     Globals.nextPrayerTime = DateFormat('HH:mm').format(next);
     Globals.nextArabicPrayer = getArabicPrayerName(name);
 
-    _updateTimeRemaining(next);
+    _startCountdown(next, onStateChanged);
+  }
 
+  static void _startCountdown(DateTime nextPrayerTime, VoidCallback onStateChanged) {
     Globals.timer?.cancel();
     Globals.timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _updateTimeRemaining(next);
+      final now = DateTime.now();
+      final diff = nextPrayerTime.difference(now);
+
+      if (diff.isNegative) {
+        // Time passed; restart whole cycle
+        _initializePrayerTimes(onStateChanged);
+        return;
+      }
+
+      Globals.timeRemaining = _formatDuration(diff);
+      onStateChanged();
     });
   }
 
-  static void _updateTimeRemaining(DateTime nextPrayerTime) {
-    final now = DateTime.now();
-    final diff = nextPrayerTime.difference(now);
+  static String _formatDuration(Duration diff) {
+    final hours = diff.inHours.toString().padLeft(2, '0');
+    final minutes = (diff.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    final formatted = '$hours:$minutes:$seconds';
 
-    Globals.timeRemaining = diff.isNegative
-        ? (Globals.languageState! ? 'Prayer time now!' : 'حان وقت الصلاة الآن!')
-        : '${diff.inHours.toString().padLeft(2, '0')}:'
-          '${(diff.inMinutes % 60).toString().padLeft(2, '0')}:'
-          '${(diff.inSeconds % 60).toString().padLeft(2, '0')}';
+    return Globals.languageState!
+        ? formatted
+        : Globals.toArabicNumber(formatted);
   }
 
   static String getArabicPrayerName(String name) {
     switch (name) {
-      case 'Fajr': return 'الفجر';
-      case 'Sunrise': return 'الشروق';
-      case 'Dhuhr': return 'الظهر';
-      case 'Asr': return 'العصر';
-      case 'Maghrib': return 'المغرب';
-      case 'Isha': return 'العشاء';
-      default: return '';
+      case 'Fajr':
+        return 'الفجر';
+      case 'Sunrise':
+        return 'الشروق';
+      case 'Dhuhr':
+        return 'الظهر';
+      case 'Asr':
+        return 'العصر';
+      case 'Maghrib':
+        return 'المغرب';
+      case 'Isha':
+        return 'العشاء';
+      default:
+        return '';
     }
   }
 
