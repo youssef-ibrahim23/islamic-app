@@ -21,7 +21,7 @@ class DropDown {
           children: [
             Row(
               children: [
-                Icon(Icons.flag, color: primaryColor),
+                const Icon(Icons.flag, color: primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   isEnglish ? 'Select Country' : 'اختر الدولة',
@@ -43,7 +43,7 @@ class DropDown {
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: primaryColor),
+                  borderSide: const BorderSide(color: primaryColor),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
@@ -87,7 +87,7 @@ class DropDown {
           children: [
             Row(
               children: [
-                Icon(Icons.location_city, color: primaryColor),
+                const Icon(Icons.location_city, color: primaryColor),
                 const SizedBox(width: 8),
                 Text(
                   isEnglish ? 'Select City/Governorate' : 'اختر المدينة / المحافظة',
@@ -109,7 +109,7 @@ class DropDown {
                 fillColor: Colors.grey[50],
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: primaryColor),
+                  borderSide: const BorderSide(color: primaryColor),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),

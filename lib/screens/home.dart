@@ -138,7 +138,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   cardColor: cardColor,
                   textColor: textColor,
                 ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
-                SizedBox(height: screenHeight * 0.04),
+                SizedBox(height: screenHeight * 0.02),
                 DailyAyatCard(
                   currentSora: Globals.currentSora,
                   surahId: Globals.surahId!,
@@ -146,7 +146,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   cardColor: cardColor,
                   textColor: textColor,
                 ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
-                SizedBox(height: screenHeight * 0.04),
 
                 SizedBox(height: screenHeight * 0.02),
                 // Category rows

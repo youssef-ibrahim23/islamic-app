@@ -231,6 +231,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                   // Prayer Times List
                   Expanded(
                     child: Container(
+                      
                       width: double.infinity,
                       padding: const EdgeInsets.all(16.0),
                       decoration: BoxDecoration(

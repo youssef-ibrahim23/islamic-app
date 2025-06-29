@@ -282,7 +282,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
 
   String message = isEnglish
         ? 'No internet connection. Please download the verse to play offline.'
-        : 'لا يوجد اتصال بالإنترنت. يرجى تنزيل الآية للتشغيل دون اتصال.';
+        : 'لا يوجد اتصال بالإنترنت. يرجى تنزيل السورة للتشغيل دون اتصال.';
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
@@ -590,12 +590,13 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     final verse = versesToDisplay[i];
     final verseNumber = verses!.indexOf(verse) + 1;
     final verseIcon = _toArabicNumber(verseNumber, true);
-    final verseText = '${verse.textUthmani} $verseIcon';
+    final verseText = verse.textUthmani;
 
     final isSelected = _selectedVerse == verseNumber;
     final isHighlighted = _searchQuery.isNotEmpty &&
         verse.textUthmani.contains(_searchQuery);
 
+    // Add verse text
     spans.add(
       TextSpan(
         text: '$verseText ',
@@ -609,7 +610,34 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
             setState(() {
               _selectedVerse = verseNumber;
             });
-            _showVerseOptions(verseText, verseNumber);
+            _showVerseOptions('$verseText $verseIcon', verseNumber);
+          },
+      ),
+    );
+
+    // Add verse number with enhanced styling
+    spans.add(
+      TextSpan(
+        text: '$verseIcon ',
+        style: TextStyle(
+          fontFamily: arabicFontFamily,
+          color: _primaryColor, // Use primary color for verse numbers
+          fontWeight: FontWeight.bold,
+          fontSize: _fontSize + 2, // Slightly larger than verse text
+          shadows: [
+            Shadow(
+              color: _primaryColor.withOpacity(0.2),
+              blurRadius: 2,
+              offset: const Offset(1, 1),
+            ),
+          ],
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            setState(() {
+              _selectedVerse = verseNumber;
+            });
+            _showVerseOptions('$verseText $verseIcon', verseNumber);
           },
       ),
     );

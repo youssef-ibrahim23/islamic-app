@@ -61,136 +61,175 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
       body: Container(
         height: double.infinity,
         decoration: const BoxDecoration(
+          color: Color(0xFFF8F5EF),
           image: DecorationImage(
             image: AssetImage('assets/background.jpg'),
             fit: BoxFit.cover,
             opacity: 0.9,
           ),
         ),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(16),
-                    color: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: TableCalendar(
-                        firstDay: DateTime(2000),
-                        lastDay: DateTime(2100),
-                        focusedDay: _focusedDay,
-                        calendarFormat: CalendarFormat.month,
-                        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                        onDaySelected: (selectedDay, focusedDay) {
-                          setState(() {
-                            _selectedDay = selectedDay;
-                            _focusedDay = focusedDay;
-                          });
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                SizedBox(height: size.height * 0.07,),
+                Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFFF8F5EF),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: TableCalendar(
+                      firstDay: DateTime(2000),
+                      lastDay: DateTime(2100),
+                      focusedDay: _focusedDay,
+                      calendarFormat: CalendarFormat.month,
+                      selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() {
+                          _selectedDay = selectedDay;
+                          _focusedDay = focusedDay;
+                        });
+                      },
+                      headerStyle: HeaderStyle(
+                        leftChevronIcon: Icon(Icons.chevron_left, color: _primaryColor, size: 28),
+                        rightChevronIcon: Icon(Icons.chevron_right, color: _primaryColor, size: 28),
+                        titleCentered: true,
+                        titleTextFormatter: (date, locale) {
+                          CalendarServices.setHijriLocale(_isEnglish);
+                          final hijri = HijriCalendar.fromDate(date);
+                          return _isEnglish
+                              ? '${date.monthName} ${date.year}\n${hijri.longMonthName} ${hijri.hYear}'
+                              : '${CalendarServices.monthNamesMap[date.monthName]} ${Globals.toArabicNumber(date.year.toString())}\n${hijri.longMonthName} ${Globals.toArabicNumber(hijri.hYear.toString())}';
                         },
-                        headerStyle: HeaderStyle(
-                          leftChevronIcon: Icon(Icons.chevron_left, color: _primaryColor, size: 28),
-                          rightChevronIcon: Icon(Icons.chevron_right, color: _primaryColor, size: 28),
-                          titleCentered: true,
-                          titleTextFormatter: (date, locale) {
-                            CalendarServices.setHijriLocale(_isEnglish);
-                            final hijri = HijriCalendar.fromDate(date);
-                            return _isEnglish
-                                ? '${date.monthName} ${date.year}\n${hijri.longMonthName} ${hijri.hYear}'
-                                : '${CalendarServices.monthNamesMap[date.monthName]} ${Globals.toArabicNumber(date.year.toString())}\n${hijri.longMonthName} ${Globals.toArabicNumber(hijri.hYear.toString())}';
-                          },
-                          formatButtonVisible: false,
-                          titleTextStyle: TextStyle(
-                            color: _primaryColor,
-                            fontSize: _isEnglish ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
-                          headerPadding: const EdgeInsets.symmetric(vertical: 12),
-                          headerMargin: const EdgeInsets.only(bottom: 8),
+                        formatButtonVisible: false,
+                        titleTextStyle: TextStyle(
+                          color: _primaryColor,
+                          fontSize: _isEnglish ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
                         ),
-                        calendarStyle: CalendarStyle(
-                          todayDecoration: BoxDecoration(
-                            color: _primaryColor.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: _primaryColor, width: 1.5),
-                          ),
-                          selectedDecoration: BoxDecoration(
-                            color: _primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          defaultTextStyle: TextStyle(
-                            fontSize: 16,
-                            color: _textColor,
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
-                          weekendTextStyle: TextStyle(
-                            fontSize: 16,
-                            color: _textColor,
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
-                          outsideTextStyle: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[400],
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
-                          selectedTextStyle: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          todayTextStyle: TextStyle(
-                            fontSize: 16,
-                            color: _primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
-                          cellMargin: const EdgeInsets.all(4),
-                          cellPadding: EdgeInsets.zero,
+                        headerPadding: const EdgeInsets.symmetric(vertical: 12),
+                        headerMargin: const EdgeInsets.only(bottom: 8),
+                      ),
+                      calendarStyle: CalendarStyle(
+                        todayDecoration: BoxDecoration(
+                          color: _primaryColor.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: _primaryColor, width: 1.5),
                         ),
-                        daysOfWeekStyle: DaysOfWeekStyle(
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                          ),
-                          weekdayStyle: TextStyle(
-                            color: _primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
-                          weekendStyle: TextStyle(
-                            color: _primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                          ),
+                        selectedDecoration: BoxDecoration(
+                          color: _primaryColor,
+                          shape: BoxShape.circle,
                         ),
-                        calendarBuilders: CalendarBuilders(
-                          dowBuilder: (context, day) {
-                            return Center(
-                              child: Text(
-                                weekdayNames[day.weekday % 7],
+                        defaultTextStyle: TextStyle(
+                          fontSize: 16,
+                          color: _textColor,
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                        ),
+                        weekendTextStyle: TextStyle(
+                          fontSize: 16,
+                          color: _textColor,
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                        ),
+                        outsideTextStyle: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[400],
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                        ),
+                        selectedTextStyle: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        todayTextStyle: TextStyle(
+                          fontSize: 16,
+                          color: _primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                        ),
+                        cellMargin: const EdgeInsets.all(4),
+                        cellPadding: EdgeInsets.zero,
+                      ),
+                      daysOfWeekStyle: DaysOfWeekStyle(
+                        
+                        decoration: const BoxDecoration(
+                          
+                          color: Color(0xFFF8F5EF),
+                        ),
+                        weekdayStyle: TextStyle(
+                          color: _primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                        ),
+                        weekendStyle: TextStyle(
+                          color: _primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                        ),
+                      ),
+                      calendarBuilders: CalendarBuilders(
+                        dowBuilder: (context, day) {
+                          return Center(
+                            child: Text(
+                              weekdayNames[day.weekday % 7],
+                              style: TextStyle(
+                                color: _primaryColor,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                              ),
+                            ),
+                          );
+                        },
+                        defaultBuilder: (context, day, focusedDay) {
+                          CalendarServices.setHijriLocale(_isEnglish);
+                          final hijri = HijriCalendar.fromDate(day);
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _isEnglish ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
                                 style: TextStyle(
-                                  color: _primaryColor,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: _textColor,
+                                  fontWeight: FontWeight.w500,
                                   fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
                                 ),
                               ),
-                            );
-                          },
-                          defaultBuilder: (context, day, focusedDay) {
-                            CalendarServices.setHijriLocale(_isEnglish);
-                            final hijri = HijriCalendar.fromDate(day);
-                            return Column(
+                              const SizedBox(height: 2),
+                              Text(
+                                _isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _hijriTextColor,
+                                  fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                        todayBuilder: (context, day, focusedDay) {
+                          CalendarServices.setHijriLocale(_isEnglish);
+                          final hijri = HijriCalendar.fromDate(day);
+                          return Container(
+                            width: cellSize,
+                            height: cellSize,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _primaryColor.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: _primaryColor, width: 1.5),
+                            ),
+                            child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   _isEnglish ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: _textColor,
-                                    fontWeight: FontWeight.w500,
+                                    color: _primaryColor,
+                                    fontWeight: FontWeight.bold,
                                     fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
                                   ),
                                 ),
@@ -199,101 +238,64 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
                                   _isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: _hijriTextColor,
+                                    color: _primaryColor,
                                     fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
                                   ),
                                 ),
                               ],
-                            );
-                          },
-                          todayBuilder: (context, day, focusedDay) {
-                            CalendarServices.setHijriLocale(_isEnglish);
-                            final hijri = HijriCalendar.fromDate(day);
-                            return Container(
-                              width: cellSize,
-                              height: cellSize,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: _primaryColor.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: _primaryColor, width: 1.5),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _isEnglish ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: _primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                                    ),
+                            ),
+                          );
+                        },
+                        selectedBuilder: (context, day, focusedDay) {
+                          CalendarServices.setHijriLocale(_isEnglish);
+                          final hijri = HijriCalendar.fromDate(day);
+                          return Container(
+                            width: cellSize,
+                            height: cellSize,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _isEnglish ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: _primaryColor,
-                                      fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                                    ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                          selectedBuilder: (context, day, focusedDay) {
-                            CalendarServices.setHijriLocale(_isEnglish);
-                            final hijri = HijriCalendar.fromDate(day);
-                            return Container(
-                              width: cellSize,
-                              height: cellSize,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: _primaryColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _isEnglish ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontFamily: _isEnglish ? 'Roboto' : 'Tajawal',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
+                  ),
+                ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1),
+        
+                SizedBox(height: size.height * 0.06,),
+        
+                if (_selectedDay != null)
+                  SelectedDateCard(
+                    selectedDay: _selectedDay!,
+                    isEnglish: _isEnglish,
+                    primaryColor: _primaryColor,
+                    textColor: _textColor,
                   ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1),
-
-                  const SizedBox(height: 24),
-
-                  if (_selectedDay != null)
-                    SelectedDateCard(
-                      selectedDay: _selectedDay!,
-                      isEnglish: _isEnglish,
-                      primaryColor: _primaryColor,
-                      textColor: _textColor,
-                    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1),
-                ],
-              ),
+              ],
             ),
           ),
         ),

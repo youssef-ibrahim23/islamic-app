@@ -28,9 +28,10 @@ class SelectedDateCard extends StatelessWidget {
     final gregorianDate = selectedDay;
 
     return Material(
+      
       elevation: elevation,
       borderRadius: borderRadius,
-      color: Theme.of(context).cardColor,
+      color: const Color(0xFFF8F5EF),
       shadowColor: Theme.of(context).shadowColor,
       child: Padding(
         padding: const EdgeInsets.all(16.0),

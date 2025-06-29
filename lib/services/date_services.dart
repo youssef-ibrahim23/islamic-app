@@ -35,7 +35,7 @@ class DateService {
     };
 
     return Globals.languageState!
-        ? "${currentMonth} ${currentDay} ,  ${currentYear}"
+        ? "$currentMonth $currentDay ,  $currentYear"
         : "   ${monthNamesMap[currentMonth]} ${_toArabicNumber(currentDay.toString())} ,  ${_toArabicNumber(currentYear)}  ";
   }
 

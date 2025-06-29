@@ -39,7 +39,7 @@ class LanguageDropDown extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 1.5),
+          borderSide: const BorderSide(color: primaryColor, width: 1.5),
         ),
         filled: true,
         fillColor: Colors.grey.shade50,
@@ -49,7 +49,7 @@ class LanguageDropDown extends StatelessWidget {
         color: textColor,
         fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
       ),
-      icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+      icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
       value: Globals.selectedLanguage,
       items: Globals.languages.map((language) {
         return DropdownMenuItem<String>(

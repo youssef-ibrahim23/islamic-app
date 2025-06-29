@@ -164,7 +164,7 @@ class _QuranPageState extends State<QuranPage> {
 
     final revelationPlace = (chapter.revelationPlace.toLowerCase() == "makkah")
         ? (isEnglish ? "Makkeah" : "مكية")
-        : (isEnglish ? "Madaneah" : "مدينة");
+        : (isEnglish ? "Madaneah" : "مدنية");
 
     final versesCountText = isEnglish
         ? "${chapter.versesCount} verses"
@@ -175,6 +175,7 @@ class _QuranPageState extends State<QuranPage> {
     return Directionality(
       textDirection: direction,
       child: Card(
+        color: const Color(0xFFF8F5EF),
         elevation: 2,
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
         shape: RoundedRectangleBorder(

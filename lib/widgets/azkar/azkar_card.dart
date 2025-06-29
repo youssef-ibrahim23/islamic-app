@@ -43,6 +43,7 @@ final completed = Globals.completionCounts[category]?[index] ?? 0;
               onChanged();
             },
             child: Container(
+              color: const Color(0xFFF8F5EF),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

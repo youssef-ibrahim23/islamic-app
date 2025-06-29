@@ -27,13 +27,13 @@ class SocialMediaLinksWidget extends StatelessWidget {
   url: 'https://www.linkedin.com/company/ntg-clarity',
   color: Color(0xFF0077B5),
 ),
-SizedBox(width: 30),
+const SizedBox(width: 30),
 const SocialIconWidget(
   icon: FontAwesomeIcons.envelope,
   url: 'mailto:egypt@ntgclarity.com',
   color: primaryColor,
 ),
-SizedBox(width: 30),
+const SizedBox(width: 30),
 const SocialIconWidget(
   icon: FontAwesomeIcons.globe,
   url: 'https://ntgclarity.com/',

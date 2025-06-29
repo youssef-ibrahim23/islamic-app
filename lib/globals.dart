@@ -3,12 +3,10 @@
 import 'dart:async';
 import 'dart:core';
 import 'package:adhan/adhan.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:islamic_app/models/Azkar.dart';
 import 'package:islamic_app/models/hadith.dart';
 import 'package:islamic_app/models/surah.dart';
-import 'package:islamic_app/models/verse.dart';
 
 class Globals {
   /// ----------------------------
@@ -88,9 +86,7 @@ class Globals {
   /// Utility Functions
   /// ----------------------------
 
-  static String get fontFamily => languageState! ? 'Roboto' : 'Tajawal';
 
-  static TextDirection get textDirection => languageState! ? TextDirection.ltr : TextDirection.rtl;
 
   /// Converts English numerals to Arabic-Indic numerals
   static String toArabicNumber(String input) {
@@ -120,35 +116,17 @@ class Globals {
   static DateTime? selectedDay = DateTime.now();
   static final List<String> languages = ['English', 'العربية'];
   static String selectedLanguage = Globals.languageState! ? 'English' : 'العربية';
-  static String get arabicFontFamily => 'Scheherazade New';
-  static double fontSize = 24.0;
+  
+  
 
-  static List<Verse>? verses;
-  static List<Verse>? filteredVerses;
-  static String? allVersesText;
-  static int? lastClickedVerse;
 
-  static String errorMessage = '';
-  static PlayerState playerState = PlayerState.stopped;
-  static double playbackSpeed = 1.0;
-  static Duration duration = Duration.zero;
-  static Duration position = Duration.zero;
-  static bool isPlaying = false;
-  static bool showAudioControls = false;
-  static bool isDownloaded = false;
-  static bool isDownloading = false;
-  static bool isPlayButtonLoading = false;
-  static double downloadProgress = 0.0;
-  static String? localAudioPath;
-  static double lastScrollPosition = 0.0;
-  static int? selectedVerse;
+
   static bool isSearching = false;
-  static String searchQuery = '';
-  static bool verseIsLoading = true;
-  static String downloadStatus = '';
 
-  static String? userCountry;
-  static String? userGovernorate;
+
+
+
+  
 
 
 }
