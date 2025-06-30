@@ -39,13 +39,6 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 
-  void _navigateToWelcome() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const BottomBar()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

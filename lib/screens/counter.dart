@@ -122,7 +122,7 @@ class _CounterState extends State<Counter> {
                                 key: ValueKey<int>(_counter),
                                 Globals.languageState!
                                     ? '$_counter'
-                                    : CounterService.toArabicNumber(_counter.toString()),
+                                    : Globals.toArabicNumber(_counter.toString()),
                                 style: TextStyle(
                                   fontSize: isPortrait
                                       ? size.width * 0.2

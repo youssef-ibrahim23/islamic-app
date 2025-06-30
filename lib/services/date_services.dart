@@ -3,80 +3,76 @@ import 'package:intl/intl.dart';
 import 'package:islamic_app/globals.dart';
 
 class DateService {
+  static final _arabicNumerals = {
+    '0': '٠',
+    '1': '١',
+    '2': '٢',
+    '3': '٣',
+    '4': '٤',
+    '5': '٥',
+    '6': '٦',
+    '7': '٧',
+    '8': '٨',
+    '9': '٩',
+  };
+
+  static final _dayNamesMap = {
+    'Monday': 'الإثنين',
+    'Tuesday': 'الثلاثاء',
+    'Wednesday': 'الأربعاء',
+    'Thursday': 'الخميس',
+    'Friday': 'الجمعة',
+    'Saturday': 'السبت',
+    'Sunday': 'الأحد',
+  };
+
+  static final _monthNamesMap = {
+    'January': 'يناير',
+    'February': 'فبراير',
+    'March': 'مارس',
+    'April': 'أبريل',
+    'May': 'مايو',
+    'June': 'يونيو',
+    'July': 'يوليو',
+    'August': 'أغسطس',
+    'September': 'سبتمبر',
+    'October': 'أكتوبر',
+    'November': 'نوفمبر',
+    'December': 'ديسمبر',
+  };
+
+  /// Returns the current Gregorian date in English or Arabic based on language setting.
   static String getCurrentGregorianDate() {
-    String currentDayName = DateFormat("EEEE").format(DateTime.now());
-    int currentDay = DateTime.now().day;
-    String currentMonth = DateFormat("MMMM").format(DateTime.now());
-    String currentYear = DateFormat("y").format(DateTime.now());
-    
-    Map<String, String> dayNamesMap = {
-      'Monday': 'الإثنين',
-      'Tuesday': 'الثلاثاء',
-      'Wednesday': 'الأربعاء',
-      'Thursday': 'الخميس',
-      'Friday': 'الجمعة',
-      'Saturday': 'السبت',
-      'Sunday': 'الأحد',
-    };
+    final now = DateTime.now();
+    final day = now.day;
+    final year = now.year.toString();
+    final month = DateFormat("MMMM").format(now);
 
-    Map<String, String> monthNamesMap = {
-      'January': 'يناير',
-      'February': 'فبراير',
-      'March': 'مارس',
-      'April': 'أبريل',
-      'May': 'مايو',
-      'June': 'يونيو',
-      'July': 'يوليو',
-      'August': 'أغسطس',
-      'September': 'سبتمبر',
-      'October': 'أكتوبر',
-      'November': 'نوفمبر',
-      'December': 'ديسمبر',
-    };
+    if (Globals.languageState == true) {
+      return "$month $day, $year";
+    } else {
+      final arabicDay = _toArabicNumber(day.toString());
+      final arabicYear = _toArabicNumber(year);
+      final arabicMonth = _monthNamesMap[month] ?? month;
 
-    return Globals.languageState!
-        ? "$currentMonth $currentDay ,  $currentYear"
-        : "   ${monthNamesMap[currentMonth]} ${_toArabicNumber(currentDay.toString())} ,  ${_toArabicNumber(currentYear)}  ";
+      return "$arabicMonth $arabicDay , $arabicYear";
+    }
   }
 
+  /// Returns the current Hijri date formatted based on selected language.
   static String getCurrentHijriDate() {
-    Globals.languageState! 
-        ? HijriCalendar.setLocal("en")
-        : HijriCalendar.setLocal("ar");
-    
+    HijriCalendar.setLocal(Globals.languageState == true ? "en" : "ar");
     return HijriCalendar.fromDate(DateTime.now()).toFormat("dd MMMM yyyy");
   }
 
+  /// Converts English digits to Arabic numerals.
   static String _toArabicNumber(String input) {
-    Map<String, String> arabicNumerals = {
-      '0': '٠',
-      '1': '١',
-      '2': '٢',
-      '3': '٣',
-      '4': '٤',
-      '5': '٥',
-      '6': '٦',
-      '7': '٧',
-      '8': '٨',
-      '9': '٩',
-    };
-
-    return input.split('').map((char) => arabicNumerals[char] ?? char).join('');
+    return input.split('').map((char) => _arabicNumerals[char] ?? char).join('');
   }
 
+  /// Returns the name of the current day in selected language.
   static String getCurrentDayName() {
-    String englishDay = DateFormat("EEEE").format(DateTime.now());
-    
-    Map<String, String> dayNamesMap = {
-      'Monday': 'الإثنين',
-      'Tuesday': 'الثلاثاء',
-      'Wednesday': 'الأربعاء',
-      'Thursday': 'الخميس',
-      'Friday': 'الجمعة',
-      'Saturday': 'السبت',
-      'Sunday': 'الأحد',
-    };
-
-    return Globals.languageState! ? englishDay : dayNamesMap[englishDay]!;
+    final day = DateFormat("EEEE").format(DateTime.now());
+    return Globals.languageState == true ? day : _dayNamesMap[day] ?? day;
   }
 }

@@ -40,6 +40,8 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/ic_launcher.jpg" # replace with your actual icon path
+  adaptive_icon_background: "#FFFFFF"     # for Android 8.0+
+  adaptive_icon_foreground: "assets/ic_launcher.jpg"
 
 dev_dependencies:
   flutter_lints: ^2.0.0
@@ -50,20 +52,14 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/gmail.png
     - assets/Quran.JSON
     - assets/Azkar.JSON
     - assets/Ahadith.JSON
     - assets/Surah.JSON
-    - assets/location.png
     - assets/ic_launcher.jpg
     - assets/background.jpg
-    - assets/ayah.jpg
     - assets/prayer.jpg
-    - assets/zekr_background.jpg
-    - assets/compass.jpg
-    - assets/kaaba_icon.png
-    - assets/border.jpeg
+    
 
   # fonts:
   #   - family: lateef

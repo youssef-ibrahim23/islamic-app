@@ -24,6 +24,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with RouteAware {
+  String? _surahName;
+  int? _surahId;
 
   @override
   void initState() {
@@ -34,7 +36,6 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _loadSurahData();
     Globals.routeObserver.subscribe(this, ModalRoute.of(context)! as PageRoute);
   }
 
@@ -45,77 +46,26 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   void _loadSurahData() {
     HomeServices.loadLastSurah((loadedId, loadedName) {
-      setState(() {
-        Globals.currentSora = loadedName;
-        Globals.surahId = loadedId;
-      });
+      if (mounted) {
+        setState(() {
+          _surahId = loadedId;
+          _surahName = loadedName;
+        });
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    Globals.routeObserver.unsubscribe(this);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
-    final bool isEnglish = Globals.languageState!;
-
-    final firstRow = [
-      CategoryItem(
-        icon: FontAwesomeIcons.bookQuran,
-        label: isEnglish ? "Quran" : "القرآن",
-        page: const QuranPage(),
-        primaryColor: primaryColor,
-        cardColor: cardColor,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-      ).animate().fadeIn(duration: 800.ms).slideY(begin: 0.3),
-      CategoryItem(
-        icon: FontAwesomeIcons.handsPraying,
-        label: isEnglish ? "Azkar" : "الأذكار",
-        page: const AzkarPage(),
-        primaryColor: primaryColor,
-        cardColor: cardColor,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-      ).animate().fadeIn(duration: 900.ms).slideY(begin: 0.3),
-      CategoryItem(
-        icon: FontAwesomeIcons.mosque,
-        label: isEnglish ? "Prayers" : "الصلاة",
-        page: const PrayerTimesPage(),
-        primaryColor: primaryColor,
-        cardColor: cardColor,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-      ).animate().fadeIn(duration: 1000.ms).slideY(begin: 0.3),
-    ];
-
-    final secondRow = [
-      CategoryItem(
-        icon: FontAwesomeIcons.kaaba,
-        label: isEnglish ? "Counter" : "التسبيح",
-        page: const Counter(),
-        primaryColor: primaryColor,
-        cardColor: cardColor,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-      ).animate().fadeIn(duration: 1100.ms).slideY(begin: 0.3),
-      CategoryItem(
-        icon: FontAwesomeIcons.calendarDays,
-        label: isEnglish ? "Calendar" : "التقويم",
-        page: const EnhancedCalendar(),
-        primaryColor: primaryColor,
-        cardColor: cardColor,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-      ).animate().fadeIn(duration: 1200.ms).slideY(begin: 0.3),
-      CategoryItem(
-        icon: FontAwesomeIcons.bookOpen,
-        label: isEnglish ? "Ahadith" : "الأحاديث",
-        page: const HadithScreen(),
-        primaryColor: primaryColor,
-        cardColor: cardColor,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-      ).animate().fadeIn(duration: 1300.ms).slideY(begin: 0.3),
-    ];
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isEnglish = Globals.languageState ?? true;
 
     return Scaffold(
       body: Container(
@@ -127,10 +77,9 @@ class _HomePageState extends State<HomePage> with RouteAware {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: MediaQuery.of(context).size.width * 0.04,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               children: [
                 SizedBox(height: screenHeight * 0.06),
@@ -138,33 +87,54 @@ class _HomePageState extends State<HomePage> with RouteAware {
                   cardColor: cardColor,
                   textColor: textColor,
                 ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
-                SizedBox(height: screenHeight * 0.03),
-                DailyAyatCard(
-                  currentSora: Globals.currentSora,
-                  surahId: Globals.surahId!,
-                  accentColor: accentColor,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
 
                 SizedBox(height: screenHeight * 0.03),
-                // Category rows
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: isEnglish ? firstRow : firstRow.reversed.toList(),
-                ),
+                if (_surahId != null)
+                  DailyAyatCard(
+                    currentSora: _surahName ?? "",
+                    surahId: _surahId!,
+                    accentColor: accentColor,
+                    cardColor: cardColor,
+                    textColor: textColor,
+                  ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
+
+                SizedBox(height: screenHeight * 0.03),
+                _buildCategoryRow(isEnglish, [
+                  _buildAnimatedCategory(FontAwesomeIcons.bookQuran, isEnglish ? "Quran" : "القرآن", const QuranPage(), 800),
+                  _buildAnimatedCategory(FontAwesomeIcons.handsPraying, isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 900),
+                  _buildAnimatedCategory(FontAwesomeIcons.mosque, isEnglish ? "Prayers" : "الصلاة", const PrayerTimesPage(), 1000),
+                ]),
                 SizedBox(height: screenHeight * 0.025),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: isEnglish ? secondRow : secondRow.reversed.toList(),
-                ),
+                _buildCategoryRow(isEnglish, [
+                  _buildAnimatedCategory(FontAwesomeIcons.kaaba, isEnglish ? "Counter" : "التسبيح", const Counter(), 1100),
+                  _buildAnimatedCategory(FontAwesomeIcons.calendarDays, isEnglish ? "Calendar" : "التقويم", const EnhancedCalendar(), 1200),
+                  _buildAnimatedCategory(FontAwesomeIcons.bookOpen, isEnglish ? "Ahadith" : "الأحاديث", const HadithScreen(), 1300),
+                ]),
                 SizedBox(height: screenHeight * 0.04),
-                
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAnimatedCategory(IconData icon, String label, Widget page, int durationMs) {
+    return CategoryItem(
+      icon: icon,
+      label: label,
+      page: page,
+      primaryColor: primaryColor,
+      cardColor: cardColor,
+      textColor: textColor,
+      backgroundColor: backgroundColor,
+    ).animate().fadeIn(duration: durationMs.ms).slideY(begin: 0.3);
+  }
+
+  Widget _buildCategoryRow(bool isEnglish, List<Widget> items) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: isEnglish ? items : items.reversed.toList(),
     );
   }
 }

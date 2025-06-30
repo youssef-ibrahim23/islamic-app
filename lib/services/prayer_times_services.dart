@@ -16,83 +16,96 @@ class PrayerTimesService {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
-  static Future<void> checkLocationAndNavigate(BuildContext context, VoidCallback onStateChanged) async {
+  /// Entry method to check location and navigate or init
+  static Future<void> checkLocationAndNavigate(
+    BuildContext context,
+    VoidCallback onStateChanged,
+  ) async {
     await _ensurePrefsLoaded();
 
-    String? country = getLocalizedString(
+    final country = getLocalizedString(
       _prefs!.getString('countryEnglish'),
       _prefs!.getString('countryArabic'),
     );
-    String? governorate = getLocalizedString(
+    final governorate = getLocalizedString(
       _prefs!.getString('governorateEnglish'),
       _prefs!.getString('governorateArabic'),
     );
 
     if (country == null || governorate == null) {
-      try {
-        // Check location permission
-        if (!await Geolocator.isLocationServiceEnabled()) {
-          throw Exception("Location services are disabled.");
-        }
-
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) throw Exception("Permission denied.");
-        }
-        if (permission == LocationPermission.deniedForever) throw Exception("Permission permanently denied.");
-
-        // Get current location
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        ).timeout(const Duration(seconds: 10));
-
-        List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isEmpty) throw Exception("Failed to detect location.");
-        Placemark place = placemarks.first;
-
-        String rawCountry = place.country ?? "Unknown";
-        String rawGovernorate = place.administrativeArea?.split(' ').first ?? "Unknown";
-
-        String countryAr = Locations.arabicCountryFromEnglish(rawCountry);
-        String governorateAr = Locations.englishGovernorateToArabic(rawCountry, rawGovernorate) ?? rawGovernorate;
-
-        // Save to SharedPreferences
-        await _prefs!.setString('countryEnglish', rawCountry);
-        await _prefs!.setString('countryArabic', countryAr);
-        await _prefs!.setString('governorateEnglish', rawGovernorate);
-        await _prefs!.setString('governorateArabic', governorateAr);
-
-        // Set globals
-        country = getLocalizedString(rawCountry, countryAr);
-        governorate = getLocalizedString(rawGovernorate, governorateAr);
-        Globals.currentLocation = "$governorate, $country";
-        Globals.locationSelected = true;
-        Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Coordinates(30.0444, 31.2357);
-
-        await _initializePrayerTimes(onStateChanged);
-      } catch (e) {
-        debugPrint("Location error: $e");
-
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LocationSelectionPage()),
-            );
-          }
-        });
-      }
+      await _detectAndStoreLocation(context, onStateChanged);
     } else {
       await _loadLocationAndInitialize(onStateChanged);
     }
   }
 
-  static Future<void> changeLocation(BuildContext context, VoidCallback onStateChanged) async {
+  static Future<void> _detectAndStoreLocation(
+    BuildContext context,
+    VoidCallback onStateChanged,
+  ) async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw Exception("Location services are disabled.");
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception("Location permission denied.");
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 10));
+
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isEmpty) throw Exception("No placemarks found.");
+
+      final place = placemarks.first;
+      final rawCountry = place.country ?? "Unknown";
+      final rawGovernorate = place.administrativeArea?.split(' ').first ?? "Unknown";
+
+      final countryAr = Locations.arabicCountryFromEnglish(rawCountry);
+      final governorateAr =
+          Locations.englishGovernorateToArabic(rawCountry, rawGovernorate) ?? rawGovernorate;
+
+      await _prefs!.setString('countryEnglish', rawCountry);
+      await _prefs!.setString('countryArabic', countryAr);
+      await _prefs!.setString('governorateEnglish', rawGovernorate);
+      await _prefs!.setString('governorateArabic', governorateAr);
+
+      Globals.currentLocation =
+          "${getLocalizedString(rawGovernorate, governorateAr)}, ${getLocalizedString(rawCountry, countryAr)}";
+      Globals.locationSelected = true;
+      Globals.coordinates =
+          Locations().governorateCoordinates[rawGovernorate] ??  Coordinates(30.0444, 31.2357);
+
+      await _initializePrayerTimes(onStateChanged);
+    } catch (e) {
+      debugPrint("📍 Location detection failed: $e");
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LocationSelectionPage()),
+          );
+        }
+      });
+    }
+  }
+
+  static Future<void> changeLocation(
+    BuildContext context,
+    VoidCallback onStateChanged,
+  ) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const LocationSelectionPage()),
@@ -108,19 +121,20 @@ class PrayerTimesService {
   static Future<void> _loadLocationAndInitialize(VoidCallback onStateChanged) async {
     await _ensurePrefsLoaded();
 
-    String? country = getLocalizedString(
+    final country = getLocalizedString(
       _prefs!.getString('countryEnglish'),
       _prefs!.getString('countryArabic'),
     );
-    String? governorate = getLocalizedString(
+    final governorate = getLocalizedString(
       _prefs!.getString('governorateEnglish'),
       _prefs!.getString('governorateArabic'),
     );
 
     if (country != null && governorate != null) {
-      Globals.currentLocation = '$governorate, $country';
+      Globals.currentLocation = "$governorate, $country";
       Globals.locationSelected = true;
-      Globals.coordinates = Locations().governorateCoordinates[governorate] ?? Coordinates(30.0444, 31.2357);
+      Globals.coordinates =
+          Locations().governorateCoordinates[governorate] ??  Coordinates(30.0444, 31.2357);
     }
 
     await _initializePrayerTimes(onStateChanged);
@@ -128,12 +142,10 @@ class PrayerTimesService {
 
   static Future<void> _initializePrayerTimes(VoidCallback onStateChanged) async {
     try {
-      final params = CalculationMethod.egyptian.getParameters();
-      params.madhab = Madhab.shafi;
-
+      final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
       final prayerTimes = PrayerTimes.today(Globals.coordinates, params);
-      final formatter = DateFormat('HH:mm');
 
+      final formatter = DateFormat('HH:mm');
       Globals.prayerTimes = {
         'Fajr': formatter.format(prayerTimes.fajr),
         'Sunrise': formatter.format(prayerTimes.sunrise),
@@ -145,7 +157,7 @@ class PrayerTimesService {
 
       Globals.prayerTimesIsLoading = false;
       _calculateAndStartCountdown(prayerTimes, onStateChanged);
-    } catch (_) {
+    } catch (e) {
       Globals.prayerTimesIsLoading = false;
       Globals.nextPrayer = Globals.languageState! ? "Error" : "خطأ";
       Globals.nextPrayerTime = Globals.languageState! ? "Unable to calculate" : "تعذر الحساب";
@@ -154,60 +166,62 @@ class PrayerTimesService {
     }
   }
 
-  static void _calculateAndStartCountdown(PrayerTimes prayerTimes, VoidCallback onStateChanged) {
+  static void _calculateAndStartCountdown(
+    PrayerTimes prayerTimes,
+    VoidCallback onStateChanged,
+  ) {
     final now = DateTime.now();
-    DateTime next;
-    String name;
+    final prayerTimesList = {
+      'Fajr': prayerTimes.fajr,
+      'Sunrise': prayerTimes.sunrise,
+      'Dhuhr': prayerTimes.dhuhr,
+      'Asr': prayerTimes.asr,
+      'Maghrib': prayerTimes.maghrib,
+      'Isha': prayerTimes.isha,
+    };
 
-    if (now.isBefore(prayerTimes.fajr)) {
-      next = prayerTimes.fajr;
-      name = 'Fajr';
-    } else if (now.isBefore(prayerTimes.sunrise)) {
-      next = prayerTimes.sunrise;
-      name = 'Sunrise';
-    } else if (now.isBefore(prayerTimes.dhuhr)) {
-      next = prayerTimes.dhuhr;
-      name = 'Dhuhr';
-    } else if (now.isBefore(prayerTimes.asr)) {
-      next = prayerTimes.asr;
-      name = 'Asr';
-    } else if (now.isBefore(prayerTimes.maghrib)) {
-      next = prayerTimes.maghrib;
-      name = 'Maghrib';
-    } else if (now.isBefore(prayerTimes.isha)) {
-      next = prayerTimes.isha;
-      name = 'Isha';
-    } else {
-      final tomorrow = now.add(const Duration(days: 1));
-      final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
-      final tomorrowTimes = PrayerTimes(
-        Globals.coordinates,
-        DateComponents(tomorrow.year, tomorrow.month, tomorrow.day),
-        params,
-      );
-      next = tomorrowTimes.fajr;
-      name = 'Fajr';
+    for (final entry in prayerTimesList.entries) {
+      if (now.isBefore(entry.value)) {
+        _setNextPrayer(entry.key, entry.value, onStateChanged);
+        return;
+      }
     }
 
-    Globals.nextPrayer = name;
-    Globals.nextPrayerTime = DateFormat('HH:mm').format(next);
-    Globals.nextArabicPrayer = getArabicPrayerName(name);
+    // After Isha — prepare for next day's Fajr
+    final tomorrow = now.add(const Duration(days: 1));
+    final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
+    final tomorrowFajr = PrayerTimes(
+      Globals.coordinates,
+      DateComponents(tomorrow.year, tomorrow.month, tomorrow.day),
+      params,
+    ).fajr;
 
-    _startCountdown(next, onStateChanged);
+    _setNextPrayer('Fajr', tomorrowFajr, onStateChanged);
   }
 
-  static void _startCountdown(DateTime nextPrayerTime, VoidCallback onStateChanged) {
+  static void _setNextPrayer(
+    String name,
+    DateTime nextTime,
+    VoidCallback onStateChanged,
+  ) {
+    Globals.nextPrayer = name;
+    Globals.nextPrayerTime = DateFormat('HH:mm').format(nextTime);
+    Globals.nextArabicPrayer = getArabicPrayerName(name);
+    _startCountdown(nextTime, onStateChanged);
+  }
+
+  static void _startCountdown(DateTime targetTime, VoidCallback onStateChanged) {
     Globals.timer?.cancel();
     Globals.timer = Timer.periodic(const Duration(seconds: 1), (_) {
       final now = DateTime.now();
-      final diff = nextPrayerTime.difference(now);
+      final diff = targetTime.difference(now);
 
       if (diff.isNegative) {
         _initializePrayerTimes(onStateChanged);
         return;
       }
 
-      String formatted = _formatDuration(diff);
+      final formatted = _formatDuration(diff);
       if (Globals.timeRemaining != formatted) {
         Globals.timeRemaining = formatted;
         onStateChanged();
@@ -216,33 +230,27 @@ class PrayerTimesService {
   }
 
   static String _formatDuration(Duration diff) {
-    final hours = diff.inHours.toString().padLeft(2, '0');
-    final minutes = (diff.inMinutes % 60).toString().padLeft(2, '0');
-    final seconds = (diff.inSeconds % 60).toString().padLeft(2, '0');
-    final formatted = '$hours:$minutes:$seconds';
-
-    return Globals.languageState!
-        ? formatted
-        : Globals.toArabicNumber(formatted);
+    final h = diff.inHours.toString().padLeft(2, '0');
+    final m = (diff.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    final formatted = '$h:$m:$s';
+    return Globals.languageState! ? formatted : Globals.toArabicNumber(formatted);
   }
 
   static String getArabicPrayerName(String name) {
     switch (name) {
-      case 'Fajr':
-        return 'الفجر';
-      case 'Sunrise':
-        return 'الشروق';
-      case 'Dhuhr':
-        return 'الظهر';
-      case 'Asr':
-        return 'العصر';
-      case 'Maghrib':
-        return 'المغرب';
-      case 'Isha':
-        return 'العشاء';
-      default:
-        return '';
+      case 'Fajr': return 'الفجر';
+      case 'Sunrise': return 'الشروق';
+      case 'Dhuhr': return 'الظهر';
+      case 'Asr': return 'العصر';
+      case 'Maghrib': return 'المغرب';
+      case 'Isha': return 'العشاء';
+      default: return '';
     }
+  }
+
+  static String? getLocalizedString(String? en, String? ar) {
+    return Globals.languageState! ? en : ar;
   }
 
   static String convertTo12HourFormat(String time24) {
@@ -252,9 +260,5 @@ class PrayerTimesService {
     } catch (_) {
       return time24;
     }
-  }
-
-  static String? getLocalizedString(String? english, String? arabic) {
-    return Globals.languageState! ? english : arabic;
   }
 }

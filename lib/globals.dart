@@ -10,55 +10,25 @@ import 'package:islamic_app/models/surah.dart';
 
 class Globals {
   /// ----------------------------
-  /// Compass & Qibla Directions
-  /// ----------------------------
-  static double? compassHeading = 0;
-  static double? qiblaDirection = 0;
-
-  /// ----------------------------
-  /// Location Permission
-  /// ----------------------------
-  static bool hasPermissions = false;
-
-  /// ----------------------------
   /// Routing & Navigation
   /// ----------------------------
-  static final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-  /// ----------------------------
-  /// Calendar Month Translations
-  /// ----------------------------
-  static final Map<String, String> hijriArabicMonths = {
-    "Sha'aban": "شعبان",
-  };
-
-  static final Map<String, String> gregorianArabicMonths = {
-    "February": "فبراير",
-  };
+  static final RouteObserver<PageRoute> routeObserver =
+      RouteObserver<PageRoute>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   /// ----------------------------
   /// User Info & Preferences
   /// ----------------------------
-  static String? accountName;
   static String currentSora = languageState! ? "Al-Fatiha" : "الفاتحة";
   static int? surahId;
   static bool? languageState;
 
   /// ----------------------------
-  /// Surah & Search Management
-  /// ----------------------------
-  static List<Chapter> chapters = [];
-  static List<Chapter>? filteredChapters;
-  static Map<int, String> favoriteSurahIds = {};
-  static bool surahsListIsLoading = false;
-  static bool hasError = false;
-
-  /// ----------------------------
   /// Azkar & Counters
   /// ----------------------------
   static Map<String, List<Azkar>> azkarCategories = {};
-   static Map<String, Map<int, int>> currentCounts = {};
+  static Map<String, Map<int, int>> currentCounts = {};
   static Map<String, Map<int, int>> completionCounts = {};
 
   /// ----------------------------
@@ -85,9 +55,6 @@ class Globals {
   /// ----------------------------
   /// Utility Functions
   /// ----------------------------
-
-
-
   /// Converts English numerals to Arabic-Indic numerals
   static String toArabicNumber(String input) {
     const englishToArabicDigits = {
@@ -110,23 +77,14 @@ class Globals {
   static int currentRangeStart = 1;
   static int currentRangeEnd = 30;
   static final int rangeSize = 30;
-  static String collectionName = Globals.languageState! ? "Ahadiths" : "الأحاديث";
+  static String collectionName =
+      Globals.languageState! ? "Ahadiths" : "الأحاديث";
   static bool hadithIsLoading = true;
-  static DateTime focusedDay = DateTime.now();
-  static DateTime? selectedDay = DateTime.now();
+
   static final List<String> languages = ['English', 'العربية'];
-  static String selectedLanguage = Globals.languageState! ? 'English' : 'العربية';
-  
-  
 
-
+  static String selectedLanguage =
+      Globals.languageState! ? 'English' : 'العربية';
 
   static bool isSearching = false;
-
-
-
-
-  
-
-
 }

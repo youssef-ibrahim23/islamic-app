@@ -5,6 +5,7 @@ import 'package:islamic_app/models/surah.dart';
 import 'package:islamic_app/screens/bottom_bar.dart';
 import 'package:islamic_app/screens/verses.dart';
 import 'package:islamic_app/services/surahs_list_services.dart';
+import 'package:islamic_app/widgets/app_them.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class QuranPage extends StatefulWidget {
@@ -22,12 +23,7 @@ class _QuranPageState extends State<QuranPage> {
   bool isLoading = false;
   bool hasError = false;
   bool isSearching = false;
-  final Color primaryColor = const Color(0xFF8B0000);
-  final Color accentColor = const Color(0xFFD4AF37);
-  final Color backgroundColor = const Color(0xFFF5F5F5);
-  final Color cardColor = Colors.white;
-  final Color textColor = const Color(0xFF333333);
-  final Color secondaryTextColor = const Color(0xFF666666);
+  
 
   // Helper getters for language and direction
   bool get isEnglish => Globals.languageState ?? true;
@@ -168,7 +164,7 @@ class _QuranPageState extends State<QuranPage> {
 
     final versesCountText = isEnglish
         ? "${chapter.versesCount} verses"
-        : "${_toArabicNumber(chapter.versesCount.toString())} آيات";
+        : "${Globals.toArabicNumber(chapter.versesCount.toString())} آيات";
 
     final direction = isEnglish ? TextDirection.ltr : TextDirection.rtl;
 
@@ -201,7 +197,7 @@ class _QuranPageState extends State<QuranPage> {
                     child: Text(
                       isEnglish
                           ? chapter.id.toString()
-                          : _toArabicNumber(chapter.id.toString()),
+                          : Globals.toArabicNumber(chapter.id.toString()),
                       style: TextStyle(
                         color: primaryColor,
                         fontWeight: FontWeight.bold,
@@ -229,7 +225,7 @@ class _QuranPageState extends State<QuranPage> {
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.place,
                             size: 14,
                             color: secondaryTextColor,
@@ -244,7 +240,7 @@ class _QuranPageState extends State<QuranPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Icon(
+                          const Icon(
                             Icons.menu_book,
                             size: 14,
                             color: secondaryTextColor,
@@ -362,7 +358,7 @@ class _QuranPageState extends State<QuranPage> {
 
   Widget _buildBody() {
     if (isLoading) {
-      return Center(
+      return const Center(
         child: CircularProgressIndicator(color: primaryColor),
       );
     }
@@ -372,7 +368,7 @@ class _QuranPageState extends State<QuranPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: primaryColor, size: 48),
+            const Icon(Icons.error_outline, color: primaryColor, size: 48),
             const SizedBox(height: 16),
             Text(
               isEnglish ? "Error loading data" : "خطأ في تحميل البيانات",
@@ -464,11 +460,4 @@ class _QuranPageState extends State<QuranPage> {
     super.dispose();
   }
 
-  String _toArabicNumber(String input) {
-    const arabicNumerals = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-    return input.split('').map((char) {
-      final digit = int.tryParse(char);
-      return digit != null ? arabicNumerals[digit] : char;
-    }).join('');
-  }
 }

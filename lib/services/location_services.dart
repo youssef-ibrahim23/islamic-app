@@ -4,35 +4,33 @@ import 'package:islamic_app/services/prayer_times_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationService {
-  /// Saves country, governorate, and corresponding coordinates to SharedPreferences.
+  /// Save selected country and governorate along with their coordinates
   static Future<void> saveLocation({
     required String country,
     required String governorate,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Save raw country and governorate names
-    await prefs.setString('countryEnglish', country);
-    await prefs.setString('countryArabic', Locations.arabicCountryFromEnglish(country));
-    await prefs.setString('governorateEnglish', governorate);
-    await prefs.setString(
-      'governorateArabic',
-      Locations.englishGovernorateToArabic(country, governorate) ?? governorate,
-    );
+    final String arabicCountry = Locations.arabicCountryFromEnglish(country);
+    final String arabicGovernorate =
+        Locations.englishGovernorateToArabic(country, governorate) ?? governorate;
 
-    // Save coordinates if known
+    await prefs.setString('countryEnglish', country);
+    await prefs.setString('countryArabic', arabicCountry);
+    await prefs.setString('governorateEnglish', governorate);
+    await prefs.setString('governorateArabic', arabicGovernorate);
+
     final Coordinates? coords = Locations().governorateCoordinates[governorate];
     if (coords != null) {
       await prefs.setDouble('latitude', coords.latitude);
       await prefs.setDouble('longitude', coords.longitude);
     } else {
-      // Fallback: remove if not found
       await prefs.remove('latitude');
       await prefs.remove('longitude');
     }
   }
 
-  /// Retrieves saved location info including coordinates, or returns null if any info missing.
+  /// Load previously saved location data
   static Future<Map<String, dynamic>?> getSavedLocation() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -59,7 +57,7 @@ class LocationService {
     return null;
   }
 
-  /// Clears all saved location data from SharedPreferences.
+  /// Completely remove all stored location data
   static Future<void> clearLocation() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('countryEnglish');

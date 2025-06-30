@@ -1,5 +1,3 @@
-// lib/services/more_services.dart
-
 import 'package:flutter/material.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,33 +5,54 @@ import 'package:url_launcher/url_launcher.dart';
 import '../globals.dart';
 
 class MoreService {
-  /// Launches an external URL using the provided [url] and shows a snackbar on error
+  /// Launches an external URL using the provided [url].
+  /// Shows a snackbar if launching fails.
   static Future<void> launchExternalUrl(BuildContext context, String url) async {
     try {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      final uri = Uri.parse(url);
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        _showSnackBar(context,
             Globals.languageState!
-                ? "Failed to open the link. Please try again."
-                : "فشل فتح الرابط. يرجى المحاولة مرة أخرى.",
-          ),
-          backgroundColor: primaryColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+                ? "Cannot open the link."
+                : "تعذر فتح الرابط.");
+      }
+    } catch (e) {
+      debugPrint("❌ URL launch failed: $e");
+      _showSnackBar(
+        context,
+        Globals.languageState!
+            ? "Failed to open the link. Please try again."
+            : "فشل فتح الرابط. يرجى المحاولة مرة أخرى.",
       );
     }
   }
 
-  /// Sets the app language preference in local storage
+  /// Updates the app language preference
   static Future<void> setLanguage(bool isEnglish) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool("language", isEnglish);
-    Globals.languageState = isEnglish;
-    Globals.selectedLanguage = isEnglish ? "English" : "العربية";
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool("language", isEnglish);
+      Globals.languageState = isEnglish;
+      Globals.selectedLanguage = isEnglish ? "English" : "العربية";
+    } catch (e) {
+      debugPrint("❌ Error setting language preference: $e");
+    }
+  }
+
+  /// Helper to display a styled snackbar
+  static void _showSnackBar(BuildContext context, String message) {
+    final snackBar = SnackBar(
+      content: Text(message),
+      backgroundColor: primaryColor,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }

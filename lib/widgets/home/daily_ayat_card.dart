@@ -64,7 +64,7 @@ class DailyAyatCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Stack(
           children: [
-            Positioned(
+            const Positioned(
               top: 10,
               right: 10,
               child: Opacity(
@@ -108,10 +108,10 @@ class DailyAyatCard extends StatelessWidget {
                         child: Row(
                           children: isArabic
                               ? [
-                                  Icon(Icons.book_outlined,
+                                  const Icon(Icons.book_outlined,
                                       color: primaryColor, size: 18),
                                   const SizedBox(width: 8),
-                                  Text(
+                                  const Text(
                                     "آية اليوم",
                                     style: TextStyle(
                                       color: primaryColor,
@@ -122,7 +122,7 @@ class DailyAyatCard extends StatelessWidget {
                                   ),
                                 ]
                               : [
-                                  Text(
+                                  const Text(
                                     "Verse of the Day",
                                     style: TextStyle(
                                       color: primaryColor,
@@ -132,7 +132,7 @@ class DailyAyatCard extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Icon(Icons.book_outlined,
+                                  const Icon(Icons.book_outlined,
                                       color: primaryColor, size: 18),
                                 ],
                         ),
@@ -142,7 +142,7 @@ class DailyAyatCard extends StatelessWidget {
                           margin: const EdgeInsets.only(left: 12),
                           width: 30,
                           height: 30,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: secondaryColor,
                             shape: BoxShape.circle,
                           ),
@@ -229,12 +229,12 @@ class DailyAyatCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: isArabic
                               ? [
-                                  Icon(Icons.import_contacts,
+                                  const Icon(Icons.import_contacts,
                                       color: primaryColor, size: 18),
                                   const SizedBox(width: 8),
                                   Text(
                                     "سورة $currentSora",
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: primaryColor,
                                       fontFamily: 'Tajawal',
                                       fontSize: 14,
@@ -245,7 +245,7 @@ class DailyAyatCard extends StatelessWidget {
                               : [
                                   Text(
                                     "Surah $currentSora",
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       color: primaryColor,
                                       fontFamily: 'Roboto',
                                       fontSize: 14,
@@ -253,7 +253,7 @@ class DailyAyatCard extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Icon(Icons.import_contacts,
+                                  const Icon(Icons.import_contacts,
                                       color: primaryColor, size: 18),
                                 ],
                         ),
