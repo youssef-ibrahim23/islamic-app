@@ -252,10 +252,8 @@ class _CompassPageState extends State<CompassPage>
         }
 
         if (!snapshot.hasData) {
-           return PermissionDeniedWidget(
-    isEnglish: isEnglish,
-    
-  );
+           
+    return _buildLoadingIndicator(compassSize);
           
         }
 
