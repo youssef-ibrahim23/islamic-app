@@ -6,7 +6,6 @@ import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:islamic_app/models/Azkar.dart';
 import 'package:islamic_app/models/hadith.dart';
-import 'package:islamic_app/models/surah.dart';
 
 class Globals {
   /// ----------------------------

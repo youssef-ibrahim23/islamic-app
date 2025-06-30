@@ -1,7 +1,7 @@
-// compass_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/compass_service.dart';
 import 'package:islamic_app/widgets/app_them.dart';
@@ -13,6 +13,7 @@ import 'package:islamic_app/widgets/compass/center_point.dart';
 import 'package:islamic_app/widgets/compass/compass_header.dart';
 import 'package:islamic_app/widgets/compass/direction_info_card.dart';
 import 'package:islamic_app/widgets/compass/calibration_widget.dart';
+import 'package:islamic_app/widgets/compass/permission_denied_widget.dart';
 
 class CompassPage extends StatefulWidget {
   const CompassPage({super.key});
@@ -28,12 +29,96 @@ class _CompassPageState extends State<CompassPage>
   double _lastQiblahAngle = 0;
   double _currentQiblahAngle = 0;
   bool _isCalibrating = false;
+  bool _permissionDenied = false;
+  bool _checkingPermission = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeAnimations();
+    _checkLocationPermission();
+  }
+
+  Future<void> _checkLocationPermission() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _checkingPermission = true;
+      _permissionDenied = false;
+    });
+
+    try {
+      final status = await Permission.location.status;
+
+      if (status.isGranted) {
+        
+        _initializeCompass();
+      } else {
+        final result = await Permission.location.request();
+        if (result.isGranted) {
+          
+          _initializeCompass();
+        } else {
+          
+          if (!mounted) return;
+          setState(() {
+            _permissionDenied = true;
+            _checkingPermission = false;
+          });
+
+          if (await Permission.location.isPermanentlyDenied) {
+            _showPermissionDeniedDialog();
+          }
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _permissionDenied = true;
+        _checkingPermission = false;
+      });
+    } finally {
+      if (_checkingPermission && mounted) {
+        setState(() => _checkingPermission = false);
+      }
+    }
+  }
+
+  Future<void> _showPermissionDeniedDialog() async {
+    final isEnglish = Globals.languageState!;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isEnglish ? 'Permission Required' : 'مطلوب إذن'),
+        content: Text(
+          isEnglish
+              ? 'Location access is permanently denied. Please open app settings and enable location permission.'
+              : 'تم رفض إذن الموقع نهائيًا. يرجى فتح إعدادات التطبيق وتمكين إذن الموقع.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(isEnglish ? 'Cancel' : 'إلغاء'),
+          ),
+          TextButton(
+            onPressed: () {
+              openAppSettings();
+              Navigator.pop(context);
+            },
+            child: Text(isEnglish ? 'Open Settings' : 'فتح الإعدادات'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _initializeCompass() {
+    if (!mounted) return;
+    setState(() {
+      _permissionDenied = false;
+      _checkingPermission = false;
+    });
   }
 
   void _initializeAnimations() {
@@ -66,10 +151,8 @@ class _CompassPageState extends State<CompassPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      // Pause sensor or animations if needed
-    } else if (state == AppLifecycleState.resumed) {
-      // Resume things
+    if (state == AppLifecycleState.resumed) {
+      _checkLocationPermission();
     }
   }
 
@@ -80,9 +163,7 @@ class _CompassPageState extends State<CompassPage>
     });
   }
 
-  double _lerpDouble(double a, double b, double t) {
-    return a + (b - a) * t;
-  }
+  double _lerpDouble(double a, double b, double t) => a + (b - a) * t;
 
   BoxDecoration _buildBackgroundDecoration() {
     return BoxDecoration(
@@ -147,11 +228,35 @@ class _CompassPageState extends State<CompassPage>
   }
 
   Widget _buildCompassContent(bool isEnglish, double compassSize) {
+    if (_checkingPermission) {
+      return _buildLoadingIndicator(compassSize);
+    }
+
+    if (_permissionDenied) {
+       return PermissionDeniedWidget(
+    isEnglish: isEnglish,
+    
+  );
+    }
+
     return StreamBuilder<QiblahDirection>(
       stream: CompassService.qiblahStream,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              isEnglish ? 'Error loading compass' : 'خطأ في تحميل البوصلة',
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        }
+
         if (!snapshot.hasData) {
-          return _buildLoadingIndicator(compassSize);
+           return PermissionDeniedWidget(
+    isEnglish: isEnglish,
+    
+  );
+          
         }
 
         final qiblaDirection = snapshot.data!.qiblah;

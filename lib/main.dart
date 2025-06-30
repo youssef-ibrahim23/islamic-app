@@ -1,36 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/screens/splash_screen.dart';
-import 'package:islamic_app/services/app_lunch_services.dart';
+import 'package:islamic_app/services/app_lunch_services.dart'; // Contains all startup logic
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    // Load preferences, permissions, initial data
-    await AppLaunchService.handleFirstRunAndPermissions();
-  } catch (e) {
-    // Optional: log to Firebase or Sentry
-    debugPrint("Startup error: $e");
-  }
+  // Handle full app launch logic including permissions, timezones, azans
+  await AppLaunchService.initializeApp();
 
+  // Start the Flutter UI
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Islamic App',
-      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: 'Cairo', // Optional: Add if Arabic font used
         splashFactory: InkRipple.splashFactory,
-        useMaterial3: true,
-        colorSchemeSeed: Colors.teal,
+        fontFamily: 'Amiri',
       ),
+      debugShowCheckedModeBanner: false,
       navigatorKey: Globals.navigatorKey,
       navigatorObservers: [Globals.routeObserver],
       home: const SplashScreen(),

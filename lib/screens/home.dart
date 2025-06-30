@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_const
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_icon_class/font_awesome_icon_class.dart';
@@ -30,7 +32,13 @@ class _HomePageState extends State<HomePage> with RouteAware {
   @override
   void initState() {
     super.initState();
+    // 👇 Precache the background image to avoid delay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      precacheImage(const AssetImage('assets/background.jpg'), context);
+    });
     _loadSurahData();
+
+    
   }
 
   @override

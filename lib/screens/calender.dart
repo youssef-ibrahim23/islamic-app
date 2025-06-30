@@ -6,8 +6,8 @@ import 'package:islamic_app/widgets/app_them.dart';
 import 'package:islamic_app/widgets/calender/calender_header.dart';
 import 'package:islamic_app/widgets/calender/calender_widgets.dart';
 import 'package:islamic_app/widgets/calender/day_builders.dart';
+import 'package:islamic_app/widgets/calender/outside_day.dart';
 import 'package:table_calendar/table_calendar.dart';
-
 
 class EnhancedCalendar extends StatefulWidget {
   const EnhancedCalendar({super.key});
@@ -111,20 +111,20 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
             });
           },
           headerStyle: HeaderStyle(
-  leftChevronIcon: const Icon(Icons.chevron_left, color: primaryColor, size: 28),
-  rightChevronIcon: const Icon(Icons.chevron_right, color: primaryColor, size: 28),
-  titleCentered: true,
-  titleTextFormatter: (date, locale) => formatCalendarHeaderText(date, isEnglish),
-  formatButtonVisible: false,
-  titleTextStyle: TextStyle(
-    color: primaryColor,
-    fontSize: isEnglish ? 16 : 18,
-    fontWeight: FontWeight.bold,
-    fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
-  ),
-  headerPadding: const EdgeInsets.symmetric(vertical: 12),
-  headerMargin: const EdgeInsets.only(bottom: 8),
-),
+            leftChevronIcon: const Icon(Icons.chevron_left, color: primaryColor, size: 28),
+            rightChevronIcon: const Icon(Icons.chevron_right, color: primaryColor, size: 28),
+            titleCentered: true,
+            titleTextFormatter: (date, locale) => formatCalendarHeaderText(date, isEnglish),
+            formatButtonVisible: false,
+            titleTextStyle: TextStyle(
+              color: primaryColor,
+              fontSize: isEnglish ? 16 : 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
+            ),
+            headerPadding: const EdgeInsets.symmetric(vertical: 12),
+            headerMargin: const EdgeInsets.only(bottom: 8),
+          ),
           calendarStyle: CalendarStyle(
             todayDecoration: BoxDecoration(
               color: primaryColor.withOpacity(0.2),
@@ -192,12 +192,14 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
                 ),
               );
             },
-            defaultBuilder: (context, day, focusedDay) => 
-              buildDefaultDay(context, day, isEnglish, textColor, hijriTextColor),
-            todayBuilder: (context, day, focusedDay) => 
-              buildTodayDay(context, day, isEnglish, primaryColor, cellSize),
-            selectedBuilder: (context, day, focusedDay) => 
-              buildSelectedDay(context, day, isEnglish, cellSize),
+            defaultBuilder: (context, day, focusedDay) =>
+                buildDefaultDay(context, day, isEnglish, textColor, hijriTextColor),
+            todayBuilder: (context, day, focusedDay) =>
+                buildTodayDay(context, day, isEnglish, primaryColor, cellSize),
+            selectedBuilder: (context, day, focusedDay) =>
+                buildSelectedDay(context, day, isEnglish, cellSize),
+            outsideBuilder: (context, day, focusedDay) => // Add this builder
+                buildOutsideDay(context, day, isEnglish, textColor, hijriTextColor),
           ),
         ),
       ),

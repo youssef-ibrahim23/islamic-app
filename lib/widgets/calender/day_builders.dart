@@ -18,7 +18,7 @@ Widget buildDefaultDay(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       Text(
-        isEnglish ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
+        Globals.languageState! ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
         style: TextStyle(
           fontSize: 16,
           color: textColor,
@@ -28,7 +28,7 @@ Widget buildDefaultDay(
       ),
       const SizedBox(height: 2),
       Text(
-        isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
+        Globals.languageState! ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
         style: TextStyle(
           fontSize: 12,
           color: hijriTextColor,

@@ -1,6 +1,21 @@
 import 'package:hijri/hijri_calendar.dart';
 
 class CalendarServices {
+
+  static HijriDate gregorianToHijri(DateTime gregorianDate) {
+    // Implement your Gregorian to Hijri conversion logic here
+    // This is a simplified example - you may want to use a proper library
+    final difference = gregorianDate.year - 622;
+    final hijriYear = (difference + (difference / 33)).round();
+    
+    return HijriDate(
+      year: hijriYear,
+      month: gregorianDate.month,
+      day: gregorianDate.day,
+    );
+  }
+
+  
   /// Returns English to Arabic month name mapping
   static Map<String, String> get monthNamesMap => {
         'January': 'يناير',
@@ -40,6 +55,7 @@ extension GregorianMonthName on DateTime {
     'December',
   ];
 
+
   /// Returns English month name for this [DateTime]
   String get monthName {
     if (month < 1 || month > 12) return '';
@@ -51,4 +67,16 @@ extension GregorianMonthName on DateTime {
     final english = monthName;
     return CalendarServices.monthNamesMap[english] ?? '';
   }
+}
+
+class HijriDate {
+  final int year;
+  final int month;
+  final int day;
+
+  HijriDate({
+    required this.year,
+    required this.month,
+    required this.day,
+  });
 }

@@ -34,14 +34,17 @@ dependencies:
   geolocator: ^13.0.2
   geocoding: ^4.0.0
   flutter_qiblah: ^3.1.0+1
+  timezone: ^0.9.4
+  flutter_local_notifications: ^17.1.0
+  just_audio: ^0.9.36
+  audio_session: ^0.1.16
+
   
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/ic_launcher.jpg" # replace with your actual icon path
-  adaptive_icon_background: "#FFFFFF"     # for Android 8.0+
-  adaptive_icon_foreground: "assets/ic_launcher.jpg"
+  image_path: "assets/ic_launcher.png" # replace with your actual icon path
 
 dev_dependencies:
   flutter_lints: ^2.0.0
@@ -52,13 +55,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/Quran.JSON
-    - assets/Azkar.JSON
-    - assets/Ahadith.JSON
-    - assets/Surah.JSON
-    - assets/ic_launcher.jpg
-    - assets/background.jpg
-    - assets/prayer.jpg
+    - assets/
     
 
   # fonts:
