@@ -1,6 +1,5 @@
 // widgets/compass/kaaba_indicator.dart
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 class KaabaIndicator extends StatelessWidget {
@@ -36,7 +35,7 @@ class KaabaIndicator extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 20,
             spreadRadius: 3,
             offset: const Offset(0, 5),
@@ -77,9 +76,11 @@ class KaabaIndicator extends StatelessWidget {
           ),
           Positioned(
             top: size * 0.1,
-            child: Text(
-              "🕋",
-              style: TextStyle(fontSize: size * 0.5, color: Colors.white),
+            child: Image.asset(
+              'assets/kaaba.png', // Path to your image asset
+              width: size * 0.7,
+              height: size * 0.7,
+              fit: BoxFit.contain,
             ),
           ),
         ],

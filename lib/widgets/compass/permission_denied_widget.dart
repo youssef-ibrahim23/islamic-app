@@ -45,11 +45,11 @@ class PermissionDeniedWidget extends StatelessWidget {
               child: Text(
                 
                 textAlign: TextAlign.center,
-                "${isEnglish 
+                isEnglish 
   ? 'Please allow location access, then close and reopen the app.' 
-  : 'يرجى منح التطبيق إذن الوصول إلى الموقع ، ثم إغلاق التطبيق وفتحه مجددًا'}",
+  : 'يرجى منح التطبيق إذن الوصول إلى الموقع ، ثم إغلاق التطبيق وفتحه مجددًا',
 
-                style: TextStyle(wordSpacing: 5,color: Colors.white, fontSize: 16 , fontFamily: 'Tajawal'),
+                style: const TextStyle(wordSpacing: 5,color: Colors.white, fontSize: 16 , fontFamily: 'Tajawal'),
               ),
             ),
             const SizedBox(height: 15),

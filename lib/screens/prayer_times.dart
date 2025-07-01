@@ -111,7 +111,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
                     isEnglish: isEnglish,
                     screenWidth: screenWidth,
                   ),
-                  Expanded(
+                  const Expanded(
                     child: PrayerTimesList(),
                   ),
                 ],

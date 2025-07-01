@@ -1,7 +1,13 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/compass_service.dart';
 import 'package:islamic_app/widgets/app_them.dart';
@@ -11,8 +17,6 @@ import 'package:islamic_app/widgets/compass/kaaba_indicator.dart';
 import 'package:islamic_app/widgets/compass/qibla_indicator.dart';
 import 'package:islamic_app/widgets/compass/center_point.dart';
 import 'package:islamic_app/widgets/compass/compass_header.dart';
-import 'package:islamic_app/widgets/compass/direction_info_card.dart';
-import 'package:islamic_app/widgets/compass/calibration_widget.dart';
 import 'package:islamic_app/widgets/compass/permission_denied_widget.dart';
 
 class CompassPage extends StatefulWidget {
@@ -28,9 +32,13 @@ class _CompassPageState extends State<CompassPage>
   late Animation<double> _angleAnimation;
   double _lastQiblahAngle = 0;
   double _currentQiblahAngle = 0;
+  double _deviceOrientation = 0;
   bool _isCalibrating = false;
   bool _permissionDenied = false;
   bool _checkingPermission = true;
+  bool _showLocationInfo = false;
+  Position? _currentPosition;
+  StreamSubscription<Position>? _positionStream;
 
   @override
   void initState() {
@@ -38,6 +46,7 @@ class _CompassPageState extends State<CompassPage>
     WidgetsBinding.instance.addObserver(this);
     _initializeAnimations();
     _checkLocationPermission();
+    _startLocationUpdates();
   }
 
   Future<void> _checkLocationPermission() async {
@@ -50,17 +59,14 @@ class _CompassPageState extends State<CompassPage>
 
     try {
       final status = await Permission.location.status;
-
+      
       if (status.isGranted) {
-        
         _initializeCompass();
       } else {
         final result = await Permission.location.request();
         if (result.isGranted) {
-          
           _initializeCompass();
         } else {
-          
           if (!mounted) return;
           setState(() {
             _permissionDenied = true;
@@ -85,32 +91,36 @@ class _CompassPageState extends State<CompassPage>
     }
   }
 
-  Future<void> _showPermissionDeniedDialog() async {
-    final isEnglish = Globals.languageState!;
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isEnglish ? 'Permission Required' : 'مطلوب إذن'),
-        content: Text(
-          isEnglish
-              ? 'Location access is permanently denied. Please open app settings and enable location permission.'
-              : 'تم رفض إذن الموقع نهائيًا. يرجى فتح إعدادات التطبيق وتمكين إذن الموقع.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(isEnglish ? 'Cancel' : 'إلغاء'),
-          ),
-          TextButton(
-            onPressed: () {
-              openAppSettings();
-              Navigator.pop(context);
-            },
-            child: Text(isEnglish ? 'Open Settings' : 'فتح الإعدادات'),
-          ),
-        ],
+  void _startLocationUpdates() {
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
       ),
-    );
+    ).listen((Position position) {
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+        });
+      }
+    });
+  }
+
+  void _showPermissionDeniedDialog() {
+    final isEnglish = Globals.languageState!;
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.scale,
+      title: isEnglish ? 'Permission Required' : 'مطلوب إذن',
+      desc: isEnglish
+          ? 'Location access is required for accurate Qibla direction. Please enable location services.'
+          : 'يجب تفعيل خدمات الموقع للحصول على اتجاه القبلة الدقيق.',
+      btnCancelText: isEnglish ? 'Cancel' : 'إلغاء',
+      btnOkText: isEnglish ? 'Open Settings' : 'فتح الإعدادات',
+      btnCancelOnPress: () {},
+      btnOkOnPress: () => openAppSettings(),
+    ).show();
   }
 
   void _initializeCompass() {
@@ -123,7 +133,7 @@ class _CompassPageState extends State<CompassPage>
 
   void _initializeAnimations() {
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: 800.ms,
       vsync: this,
     );
 
@@ -146,6 +156,7 @@ class _CompassPageState extends State<CompassPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
+    _positionStream?.cancel();
     super.dispose();
   }
 
@@ -158,7 +169,16 @@ class _CompassPageState extends State<CompassPage>
 
   void _startCalibration() {
     setState(() => _isCalibrating = true);
-    Future.delayed(const Duration(seconds: 10), () {
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.info,
+      animType: AnimType.scale,
+      title: Globals.languageState! ? 'Calibrating' : 'جاري المعايرة',
+      desc: Globals.languageState!
+          ? 'Please move your device in a figure-8 pattern'
+          : 'قم بتحريك الجهاز على شكل رقم 8',
+      autoHide: const Duration(seconds: 10),
+    ).show().then((_) {
       if (mounted) setState(() => _isCalibrating = false);
     });
   }
@@ -171,7 +191,7 @@ class _CompassPageState extends State<CompassPage>
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          primaryColor.withOpacity(0.8),
+          Colors.black.withOpacity(0.8),
           Colors.white.withOpacity(0.1),
         ],
       ),
@@ -205,7 +225,7 @@ class _CompassPageState extends State<CompassPage>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: primaryColor.withOpacity(0.4),
             blurRadius: 25,
             spreadRadius: 5,
           ),
@@ -214,10 +234,16 @@ class _CompassPageState extends State<CompassPage>
       child: Stack(
         alignment: Alignment.center,
         children: [
-          CompassBackground(size: compassSize),
-          CompassMarkings(size: compassSize, isEnglish: Globals.languageState!),
-          KaabaIndicator(angle: angle, compassSize: compassSize),
-          QiblaIndicator(angle: angle, compassSize: compassSize),
+          Transform.rotate(
+            angle: -_deviceOrientation * (pi / 180),
+            child: CompassBackground(size: compassSize),
+          ),
+          Transform.rotate(
+            angle: -_deviceOrientation * (pi / 180),
+            child: CompassMarkings(size: compassSize, isEnglish: Globals.languageState!),
+          ),
+          KaabaIndicator(angle: angle + _deviceOrientation, compassSize: compassSize),
+          QiblaIndicator(angle: angle + _deviceOrientation, compassSize: compassSize),
           const CenterPoint(),
         ],
       ),
@@ -227,34 +253,99 @@ class _CompassPageState extends State<CompassPage>
         );
   }
 
+  Widget _buildLocationInfo() {
+    if (_currentPosition == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                Globals.languageState! ? 'Latitude:' : 'خط العرض:',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                _currentPosition!.latitude.toStringAsFixed(6),
+                style: GoogleFonts.poppins(
+                  color: primaryColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                Globals.languageState! ? 'Longitude:' : 'خط الطول:',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                _currentPosition!.longitude.toStringAsFixed(6),
+                style: GoogleFonts.poppins(
+                  color: primaryColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCompassContent(bool isEnglish, double compassSize) {
     if (_checkingPermission) {
       return _buildLoadingIndicator(compassSize);
     }
 
     if (_permissionDenied) {
-       return PermissionDeniedWidget(
-    isEnglish: isEnglish,
-    
-  );
+      return PermissionDeniedWidget(isEnglish: isEnglish);
     }
 
     return StreamBuilder<QiblahDirection>(
       stream: CompassService.qiblahStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              isEnglish ? 'Error loading compass' : 'خطأ في تحميل البوصلة',
-              style: const TextStyle(color: Colors.white),
-            ),
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                FontAwesomeIcons.triangleExclamation,
+                color: Colors.amber,
+                size: 40,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isEnglish ? 'Error loading compass' : 'خطأ في تحميل البوصلة',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
+              ),
+            ],
           );
         }
 
         if (!snapshot.hasData) {
-           
-    return _buildLoadingIndicator(compassSize);
-          
+          return _buildLoadingIndicator(compassSize);
         }
 
         final qiblaDirection = snapshot.data!.qiblah;
@@ -274,13 +365,67 @@ class _CompassPageState extends State<CompassPage>
             return Column(
               children: [
                 _buildCompass(animatedAngle, compassSize),
+                if (_showLocationInfo) _buildLocationInfo(),
                 const SizedBox(height: 20),
-                DirectionInfoCard(angle: animatedAngle, isEnglish: isEnglish),
-                const SizedBox(height: 25),
-                CalibrationWidget(
-                  isEnglish: isEnglish,
-                  isCalibrating: _isCalibrating,
-                  onCalibrate: _startCalibration,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _startCalibration,
+                      icon: const Icon(
+                        FontAwesomeIcons.compass,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        isEnglish ? 'Calibrate' : 'معايرة',
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _showLocationInfo = !_showLocationInfo;
+                        });
+                      },
+                      icon: Icon(
+                        _showLocationInfo
+                            ? FontAwesomeIcons.locationArrow
+                            : FontAwesomeIcons.locationDot,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      label: Text(
+                        isEnglish ? 'Location' : 'الموقع',
+                        style: const TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );

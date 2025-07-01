@@ -1,4 +1,4 @@
-// ignore_for_file: library_prefixes
+// ignore_for_file: library_prefixes, deprecated_member_use
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:islamic_app/services/app_lunch_services.dart';
