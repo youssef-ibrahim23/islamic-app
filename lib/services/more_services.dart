@@ -1,5 +1,4 @@
 // ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,22 +6,19 @@ import 'package:url_launcher/url_launcher.dart';
 import '../globals.dart';
 
 class MoreService {
-  /// Launches an external URL using the provided [url].
-  /// Shows a snackbar if launching fails.
+  /// Launches a link: http, mailto, etc.
   static Future<void> launchExternalUrl(BuildContext context, String url) async {
     try {
-      final uri = Uri.parse(url);
+      final Uri uri = Uri.parse(url);
+      print('🔗 Launching URI: $uri');
 
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        _showSnackBar(context,
-            Globals.languageState!
-                ? "Cannot open the link."
-                : "تعذر فتح الرابط.");
-      }
+      final canLaunch = await canLaunchUrl(uri);
+      if (!canLaunch) throw 'Cannot launch this URL';
+
+      final launched = await launchUrl(uri, mode: LaunchMode.platformDefault);
+      if (!launched) throw 'launchUrl returned false';
     } catch (e) {
-      debugPrint("❌ URL launch failed: $e");
+      print('❌ Exception launching: $e');
       _showSnackBar(
         context,
         Globals.languageState!
@@ -32,7 +28,7 @@ class MoreService {
     }
   }
 
-  /// Updates the app language preference
+  /// Language settings
   static Future<void> setLanguage(bool isEnglish) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -44,7 +40,7 @@ class MoreService {
     }
   }
 
-  /// Helper to display a styled snackbar
+  /// Show snackbar
   static void _showSnackBar(BuildContext context, String message) {
     final snackBar = SnackBar(
       content: Text(message),
@@ -54,7 +50,6 @@ class MoreService {
         borderRadius: BorderRadius.circular(10),
       ),
     );
-
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }

@@ -58,7 +58,6 @@ class AppLaunchService {
 
   static Future<void> _requestEssentialPermissions() async {
     await [
-      Permission.audio,
       Permission.locationWhenInUse,
       Permission.notification,
     ].request();

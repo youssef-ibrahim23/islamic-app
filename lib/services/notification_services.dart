@@ -39,7 +39,6 @@ class NotificationService {
         if (response.actionId == 'stop_azan' ||
             response.notificationResponseType ==
                 NotificationResponseType.selectedNotification) {
-          await stopAzan();
         }
       },
     );
@@ -78,7 +77,6 @@ class NotificationService {
       NotificationDetails(android: androidDetails),
     );
 
-    await playAzan();
   }
 
   /// Schedule future azan notification and play audio at that time
@@ -107,33 +105,9 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
-
-    final now = DateTime.now();
-    final delay = dateTime.difference(now);
-
-    Future.delayed(delay, () async {
-      await playAzan();
-    });
   }
 
-  /// Play the azan audio
-  Future<void> playAzan() async {
-    try {
-      await _player.setAsset('assets/azan.mp3');
-      await _player.play();
-    } catch (e) {
-      print('Error playing Azan: $e');
-    }
-  }
 
-  /// Stop azan playback
-  Future<void> stopAzan() async {
-    try {
-      await _player.stop();
-    } catch (e) {
-      print('Error stopping Azan: $e');
-    }
-  }
 
   /// Stop azan manually (static access)
   static Future<void> stopAzanManually() async {

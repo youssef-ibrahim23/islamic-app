@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:islamic_app/services/more_services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class SocialIconWidget extends StatelessWidget {
-  final IconData icon;
-  final String url;
+class EmailIconWidget extends StatelessWidget {
+  final String email;
   final Color color;
 
-  const SocialIconWidget({
+  const EmailIconWidget({
     Key? key,
-    required this.icon,
-    required this.url,
+    required this.email,
     required this.color,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () async => await MoreService.launchExternalUrl(context,url),
-        borderRadius: BorderRadius.circular(50),
+      onTap: () async {
+        final Uri emailUri = Uri.parse('mailto:$email');
+      await launchUrl(emailUri, mode: LaunchMode.externalApplication);
+
+      },
+      borderRadius: BorderRadius.circular(50),
       child: Container(
         width: 50,
         height: 50,
@@ -28,8 +29,8 @@ class SocialIconWidget extends StatelessWidget {
           border: Border.all(color: color.withOpacity(0.3)),
         ),
         child: Center(
-          child: FaIcon(
-            icon,
+          child: Icon(
+            Icons.email_rounded,
             color: color,
             size: 22,
           ),
