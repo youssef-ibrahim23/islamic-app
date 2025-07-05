@@ -13,11 +13,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  cupertino_icons: ^1.0.6
   flutter_animate: ^4.1.1+1
   awesome_dialog: ^3.1.1
   intl: ^0.19.0
-  font_awesome_icon_class: ^0.0.6
   hijri: ^3.0.0
   table_calendar: ^3.0.9
   url_launcher: ^6.2.5
@@ -29,22 +27,19 @@ dependencies:
   audioplayers: ^6.4.0
   permission_handler: ^11.3.1
   dio: ^5.4.0
-  device_info_plus: ^9.0.0
   shared_preferences: 2.3.3
   geolocator: ^13.0.2
   geocoding: ^4.0.0
   flutter_qiblah: ^3.1.0+1
   timezone: ^0.9.4
   flutter_local_notifications: ^17.1.0
-  just_audio: ^0.9.36
-  audio_session: ^0.1.16
 
   
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/ic_launcher.png" # replace with your actual icon path
+  image_path: "assets/ic_launcher.jpg" 
 
 dev_dependencies:
   flutter_lints: ^2.0.0

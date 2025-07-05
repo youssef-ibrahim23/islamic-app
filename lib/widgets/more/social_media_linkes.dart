@@ -3,7 +3,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 import 'package:islamic_app/widgets/more/social_icon.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'email_icon.dart';
 

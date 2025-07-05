@@ -326,7 +326,7 @@ class _QuranPageState extends State<QuranPage> {
             )
           : IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.push(
+              onPressed: () => Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const BottomBar()),
               ),

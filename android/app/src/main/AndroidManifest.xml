@@ -2,36 +2,34 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.islamic_app">
 
-    <!-- ✅ Required Permissions -->
+    <!-- ✅ Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <!-- ✅ Legacy storage access for Android <= 12 -->
+    <!-- ✅ Backward compatibility for storage access on Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
-    <!-- ✅ Declare location capabilities -->
-    <uses-feature android:name="android.hardware.location.gps" />
-    <uses-feature android:name="android.hardware.location.network" />
+    <!-- ✅ Optional features (don’t crash if hardware not available) -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.location.network" android:required="false" />
 
-    <!-- ✅ Application setup -->
     <application
         android:name="${applicationName}"
         android:label="Islamic App"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/LaunchTheme"
-        android:usesCleartextTraffic="true"
-        android:exported="true"
         android:allowBackup="true"
-        tools:targetApi="31">
+        android:usesCleartextTraffic="true"
+        tools:targetApi="33">
 
-        <!-- ✅ Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -51,10 +49,11 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ Alarm + Notification Receivers -->
+        <!-- ✅ Notification Receivers -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
@@ -65,17 +64,9 @@
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
 
-        <!-- ✅ Required for Flutter -->
+        <!-- ✅ Flutter versioning metadata -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-
-    <!-- 🧩 Optional: For text input plugins -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT" />
-            <data android:mimeType="text/plain" />
-        </intent>
-    </queries>
 </manifest>

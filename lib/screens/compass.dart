@@ -32,7 +32,7 @@ class _CompassPageState extends State<CompassPage>
   late Animation<double> _angleAnimation;
   double _lastQiblahAngle = 0;
   double _currentQiblahAngle = 0;
-  double _deviceOrientation = 0;
+  final double _deviceOrientation = 0;
   bool _isCalibrating = false;
   bool _permissionDenied = false;
   bool _checkingPermission = true;

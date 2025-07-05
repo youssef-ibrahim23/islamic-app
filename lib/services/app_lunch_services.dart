@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:timezone/data/latest.dart' as tz;
@@ -15,15 +13,15 @@ import 'package:islamic_app/services/notification_services.dart';
 import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
+  static bool _timezoneInitialized = false;
+
   static Future<void> initializeApp() async {
     Globals.languageState = true;
 
     await handleFirstRunAndPermissions();
     await _handleExactAlarmPermission();
-    await _setupTimezone();
+    await _setupTimezoneOnce();
     await NotificationService().init();
-
-    // Schedule azans
     await scheduleAllAzans();
     await scheduleDailyAzanUpdate();
   }
@@ -33,8 +31,8 @@ class AppLaunchService {
     final isFirstRun = prefs.getBool('first_run') ?? true;
 
     if (isFirstRun) {
-      await prefs.clear();
       await prefs.setBool('first_run', false);
+
       try {
         final tempDir = await getTemporaryDirectory();
         if (await tempDir.exists()) {
@@ -44,16 +42,7 @@ class AppLaunchService {
         debugPrint("Temp directory cleanup failed: $e");
       }
     }
-
-    await _loadLastSurah(prefs);
     await _requestEssentialPermissions();
-  }
-
-  static Future<void> _loadLastSurah(SharedPreferences prefs) async {
-    Globals.surahId = prefs.getInt('lastSurahId') ?? 1;
-    Globals.currentSora = Globals.languageState == true
-        ? (prefs.getString('lastSurahName') ?? 'Al-Fatiha')
-        : (prefs.getString('lastSurahArabicName') ?? 'الفاتحة');
   }
 
   static Future<void> _requestEssentialPermissions() async {
@@ -62,30 +51,6 @@ class AppLaunchService {
       Permission.notification,
     ].request();
 
-    await Future.wait([
-      _requestStoragePermission(),
-    ]);
-  }
-
-  static Future<bool> _requestStoragePermission() async {
-    if (!Platform.isAndroid) return true;
-
-    try {
-      final sdkVersion = await _getAndroidSDKVersion();
-
-      if (sdkVersion >= 30) {
-        final status = await Permission.manageExternalStorage.status;
-        if (status.isGranted) return true;
-        return (await Permission.manageExternalStorage.request()).isGranted;
-      } else {
-        final status = await Permission.storage.status;
-        if (status.isGranted) return true;
-        return (await Permission.storage.request()).isGranted;
-      }
-    } catch (e) {
-      debugPrint("Storage permission request failed: $e");
-      return false;
-    }
   }
 
   static Future<void> _handleExactAlarmPermission() async {
@@ -95,18 +60,26 @@ class AppLaunchService {
     }
   }
 
-  static Future<void> _setupTimezone() async {
+  static Future<void> _setupTimezoneOnce() async {
+    if (_timezoneInitialized) return;
+    _timezoneInitialized = true;
+
     Position? position;
+    String timezoneName = 'Africa/Cairo'; // Fallback
 
     try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        await Geolocator.requestPermission();
+      }
+
       position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print('⚠️ Failed to get current location: $e');
+      print('⚠️ Failed to get location: $e');
     }
-
-    String timezoneName = 'Africa/Cairo';
 
     if (position != null) {
       try {
@@ -114,43 +87,37 @@ class AppLaunchService {
           position.latitude,
           position.longitude,
         );
-        final countryCode = placemarks.first.isoCountryCode;
 
-        const tzMap = {
-          'EG': 'Africa/Cairo',
-          'SA': 'Asia/Riyadh',
-          'US': 'America/New_York',
-          'IN': 'Asia/Kolkata',
-          'ID': 'Asia/Jakarta',
-          'TR': 'Europe/Istanbul',
-          'MA': 'Africa/Casablanca',
-          'PK': 'Asia/Karachi',
-          'DZ': 'Africa/Algiers',
-          'IQ': 'Asia/Baghdad',
-        };
+        if (placemarks.isNotEmpty) {
+          final countryCode = placemarks.first.isoCountryCode;
+          const tzMap = {
+            'EG': 'Africa/Cairo',
+            'SA': 'Asia/Riyadh',
+            'US': 'America/New_York',
+            'IN': 'Asia/Kolkata',
+            'ID': 'Asia/Jakarta',
+            'TR': 'Europe/Istanbul',
+            'MA': 'Africa/Casablanca',
+            'PK': 'Asia/Karachi',
+            'DZ': 'Africa/Algiers',
+            'IQ': 'Asia/Baghdad',
+          };
 
-        if (countryCode != null && tzMap.containsKey(countryCode)) {
-          timezoneName = tzMap[countryCode]!;
+          if (countryCode != null && tzMap.containsKey(countryCode)) {
+            timezoneName = tzMap[countryCode]!;
+          }
         }
-        print('🌍 Using timezone: $timezoneName');
       } catch (e) {
-        print('❌ Failed to determine timezone from location: $e');
+        print('❌ Geocoding error: $e');
       }
-    } else {
-      print('⚠️ Using fallback timezone: $timezoneName');
     }
 
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation(timezoneName));
-  }
-
-  static Future<int> _getAndroidSDKVersion() async {
     try {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
-      return androidInfo.version.sdkInt;
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation(timezoneName));
+      print('⏰ Timezone set: $timezoneName');
     } catch (e) {
-      debugPrint("Failed to get Android SDK version: $e");
-      return 0;
+      print('❌ Failed to initialize timezone: $e');
     }
   }
 
@@ -195,7 +162,8 @@ class AppLaunchService {
 
       for (final entry in prayers.entries) {
         if (entry.value.isAfter(now)) {
-          await NotificationService().scheduleAzan(entry.key, entry.value);
+          await NotificationService()
+              .schedulePrayerNotification(entry.key, entry.value);
         }
       }
 
@@ -203,9 +171,9 @@ class AppLaunchService {
       await prefs.setDouble("lon", position.longitude);
       await prefs.setString("lastDate", todayKey);
 
-      print('✅ Azans scheduled successfully.');
+      print('✅ Azans scheduled.');
     } catch (e) {
-      print('❌ Error while scheduling azans: ${e.toString()}');
+      print('❌ Error scheduling azans: $e');
     }
   }
 

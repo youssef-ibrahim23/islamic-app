@@ -1,152 +1,173 @@
-// ignore_for_file: library_prefixes, deprecated_member_use
+// ignore_for_file: deprecated_member_use
 
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:islamic_app/services/app_lunch_services.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzData;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:islamic_app/globals.dart';
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _plugin =
+  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  static final AudioPlayer _player = AudioPlayer();
 
-  NotificationService() {
-    // Stop audio when playback completes
-    _player.playerStateStream.listen((state) async {
-      if (state.processingState == ProcessingState.completed) {
-        await _player.stop();
-      }
-    });
-  }
+  // Singleton
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
 
-  /// Initialize notifications and request permissions
   Future<void> init() async {
     tzData.initializeTimeZones();
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings();
+    const iosInit = DarwinInitializationSettings(
+      requestSoundPermission: true,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+    );
+
     const initSettings = InitializationSettings(
       android: androidInit,
       iOS: iosInit,
     );
 
-    await _plugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        if (response.actionId == 'stop_azan' ||
-            response.notificationResponseType ==
-                NotificationResponseType.selectedNotification) {
-        }
-      },
-    );
+    await _notificationsPlugin.initialize(initSettings);
+    await _requestPermissions();
+    await _createNotificationChannels();
+  }
 
+  Future<void> _requestPermissions() async {
     final status = await Permission.notification.status;
     if (!status.isGranted) {
       await Permission.notification.request();
     }
+
+    if (Platform.isIOS) {
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    }
   }
 
-  /// Show instant azan notification and play audio
-  Future<void> showAzanNotification(String title) async {
+  Future<void> _createNotificationChannels() async {
+    const prayerChannel = AndroidNotificationChannel(
+      'prayer_channel',
+      'Prayer Notifications',
+      description: 'Channel for prayer time alerts',
+      importance: Importance.max,
+      enableVibration: true,
+    );
+
+    const scheduleChannel = AndroidNotificationChannel(
+      'prayer_schedule_channel',
+      'Prayer Time Scheduler',
+      description: 'Channel for scheduling background prayer updates',
+      importance: Importance.low,
+    );
+
+    final androidPlugin =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin != null) {
+      await androidPlugin.createNotificationChannel(prayerChannel);
+      await androidPlugin.createNotificationChannel(scheduleChannel);
+    }
+  }
+
+  Future<void> showPrayerNotification(String title) async {
     final bool isEnglish = Globals.languageState ?? true;
 
-    final androidDetails = AndroidNotificationDetails(
-      'azan_channel',
-      'Azan Notifications',
+    const androidDetails = AndroidNotificationDetails(
+      'prayer_channel',
+      'Prayer Notifications',
+      channelDescription: 'Channel for prayer time alerts',
       importance: Importance.max,
       priority: Priority.high,
       playSound: false,
-      ongoing: true,
-      actions: <AndroidNotificationAction>[
-        AndroidNotificationAction(
-          'stop_azan',
-          isEnglish ? '⏹ Stop Azan' : '⏹ إيقاف الأذان',
-          showsUserInterface: true,
-          cancelNotification: true,
-        ),
-      ],
+      autoCancel: true,
     );
 
-    await _plugin.show(
-      title.hashCode,
-      isEnglish ? '📢 Azan $title' : '📢 أذان $title',
-      isEnglish ? 'Tap to stop azan' : 'اضغط لإيقاف الأذان',
-      NotificationDetails(android: androidDetails),
+    const iosDetails = DarwinNotificationDetails(
+      presentSound: false,
     );
 
+    await _notificationsPlugin.show(
+      0,
+      isEnglish ? 'Prayer Time 🕌' : 'وقت الصلاة 🕌',
+      isEnglish ? 'It is time for $title prayer' : 'حان الآن وقت صلاة $title',
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
+    );
   }
 
-  /// Schedule future azan notification and play audio at that time
-  Future<void> scheduleAzan(String title, DateTime dateTime) async {
+  Future<void> schedulePrayerNotification(String title, DateTime dateTime) async {
     final bool isEnglish = Globals.languageState ?? true;
     final tzTime = tz.TZDateTime.from(dateTime, tz.local);
     if (tzTime.isBefore(tz.TZDateTime.now(tz.local))) return;
 
     final int notificationId = title.hashCode ^ dateTime.hashCode;
 
-    await _plugin.zonedSchedule(
+    const androidDetails = AndroidNotificationDetails(
+      'prayer_channel',
+      'Prayer Notifications',
+      channelDescription: 'Channel for prayer time alerts',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: false,
+      autoCancel: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentSound: false,
+    );
+
+    await _notificationsPlugin.zonedSchedule(
       notificationId,
-      isEnglish ? '📢 Azan Time' : '📢 حان الآن وقت الأذان',
-      isEnglish ? 'Azan $title' : 'أذان $title',
+      isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
+      isEnglish ? '$title prayer time' : 'موعد صلاة $title',
       tzTime,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'azan_channel',
-          'Azan Notifications',
-          importance: Importance.max,
-          priority: Priority.high,
-          playSound: false,
-        ),
-      ),
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
+      payload: 'prayer_$title',
     );
   }
 
-
-
-  /// Stop azan manually (static access)
-  static Future<void> stopAzanManually() async {
-    try {
-      await _player.stop();
-    } catch (e) {
-      print('Error stopping Azan manually: $e');
-    }
+  Future<void> cancelAllPrayerNotifications() async {
+    await _notificationsPlugin.cancelAll();
   }
 
-  /// Cancel all scheduled azans
-  Future<void> cancelAllAzans() async {
-    await _plugin.cancelAll();
-  }
-
-  /// Schedule background update task
   Future<void> scheduleBackgroundTask(tz.TZDateTime time) async {
     final bool isEnglish = Globals.languageState ?? true;
 
-    await _plugin.zonedSchedule(
+    const androidDetails = AndroidNotificationDetails(
+      'prayer_schedule_channel',
+      'Prayer Time Scheduler',
+      channelDescription: 'Channel for scheduling background prayer updates',
+      importance: Importance.low,
+      priority: Priority.low,
+      playSound: false,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentSound: false,
+    );
+
+    await _notificationsPlugin.zonedSchedule(
       999999,
-      isEnglish ? '⏰ Updating Azan Times' : '⏰ تحديث مواعيد الأذان',
+      isEnglish ? '⏰ Updating Prayer Times' : '⏰ تحديث مواعيد الصلاة',
       isEnglish
-          ? 'Updating prayer times automatically'
+          ? 'Prayer times are being updated automatically'
           : 'يتم الآن تحديث مواعيد الصلاة تلقائيًا',
       time,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'azan_schedule_channel',
-          'Azan Scheduler',
-          importance: Importance.low,
-          priority: Priority.low,
-          playSound: false,
-        ),
-      ),
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'update_azan',
+      payload: 'update_prayer',
     );
 
     final now = tz.TZDateTime.now(tz.local);
@@ -157,5 +178,4 @@ class NotificationService {
       await AppLaunchService.scheduleDailyAzanUpdate();
     });
   }
-
 }

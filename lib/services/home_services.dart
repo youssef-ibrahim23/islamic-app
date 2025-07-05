@@ -3,9 +3,9 @@ import 'package:islamic_app/globals.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeServices {
-  /// Loads the last visited Surah ID and name from SharedPreferences,
-  /// then calls [onLoaded] with the appropriate language version.
-  static Future<void> loadLastSurah(Function(int id, String name) onLoaded) async {
+
+  /// ✅ New Future-based method for use with FutureBuilder
+  static Future<Map<String, dynamic>> loadLastSurahAsync() async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -13,17 +13,23 @@ class HomeServices {
       final String lastSurahName = prefs.getString('lastSurahName') ?? 'Al-Fatiha';
       final String lastSurahArabicName = prefs.getString('lastSurahArabicName') ?? 'الفاتحة';
 
-      Globals.surahId = lastSurahId;
       final bool isEnglish = Globals.languageState ?? true;
-      Globals.currentSora = isEnglish ? lastSurahName : lastSurahArabicName;
+      final String name = isEnglish ? lastSurahName : lastSurahArabicName;
 
-      try {
-        onLoaded(Globals.surahId!, Globals.currentSora);
-      } catch (callbackError) {
-        print('Callback execution error in loadLastSurah: $callbackError');
-      }
+      Globals.surahId = lastSurahId;
+      Globals.currentSora = name;
+
+      return {
+        'id': lastSurahId,
+        'name': name,
+      };
     } catch (e) {
-      print('❌ Error loading last Surah from SharedPreferences: $e');
+      print('❌ Error in loadLastSurahAsync: $e');
+      return {
+        'id': 1,
+        'name': 'Al-Fatiha',
+      };
     }
   }
+
 }

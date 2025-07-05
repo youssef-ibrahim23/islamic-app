@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:font_awesome_icon_class/font_awesome_icon_class.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:islamic_app/services/home_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 import 'package:islamic_app/widgets/home/category_item.dart';
@@ -26,19 +26,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with RouteAware {
-  String? _surahName;
-  int? _surahId;
+  late Future<Map<String, dynamic>> _surahFuture;
 
   @override
   void initState() {
     super.initState();
-    // 👇 Precache the background image to avoid delay
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      precacheImage(const AssetImage('assets/background.jpg'), context);
-    });
-    _loadSurahData();
+    _surahFuture = _fetchSurahData();
+  }
 
-    
+  Future<Map<String, dynamic>> _fetchSurahData() async {
+    return await HomeServices.loadLastSurahAsync();
   }
 
   @override
@@ -49,17 +46,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   @override
   void didPopNext() {
-    _loadSurahData();
-  }
-
-  void _loadSurahData() {
-    HomeServices.loadLastSurah((loadedId, loadedName) {
-      if (mounted) {
-        setState(() {
-          _surahId = loadedId;
-          _surahName = loadedName;
-        });
-      }
+    setState(() {
+      _surahFuture = _fetchSurahData();
     });
   }
 
@@ -71,58 +59,71 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isEnglish = Globals.languageState ?? true;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isEnglish = Globals.languageState ?? true;
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const Image(
             image: AssetImage('assets/background.jpg'),
             fit: BoxFit.cover,
+            gaplessPlayback: true,
           ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                SizedBox(height: screenHeight * 0.06),
-                const CombinedDateWidget(
-                  cardColor: cardColor,
-                  textColor: textColor,
-                ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.2),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  SizedBox(height: screenHeight * 0.06),
 
-                SizedBox(height: screenHeight * 0.03),
-                if (_surahId != null)
-                  DailyAyatCard(
-                    currentSora: _surahName ?? "",
-                    surahId: _surahId!,
-                    accentColor: accentColor,
+                  const CombinedDateWidget(
                     cardColor: cardColor,
                     textColor: textColor,
-                  ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
+                  ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),
 
-                SizedBox(height: screenHeight * 0.03),
-                _buildCategoryRow(isEnglish, [
-                  _buildAnimatedCategory(FontAwesomeIcons.bookQuran, isEnglish ? "Quran" : "القرآن", const QuranPage(), 800),
-                  _buildAnimatedCategory(FontAwesomeIcons.handsPraying, isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 900),
-                  _buildAnimatedCategory(FontAwesomeIcons.mosque, isEnglish ? "Prayers" : "الصلاة", const PrayerTimesPage(), 1000),
-                ]),
-                SizedBox(height: screenHeight * 0.025),
-                _buildCategoryRow(isEnglish, [
-                  _buildAnimatedCategory(FontAwesomeIcons.kaaba, isEnglish ? "Counter" : "التسبيح", const Counter(), 1100),
-                  _buildAnimatedCategory(FontAwesomeIcons.calendarDays, isEnglish ? "Calendar" : "التقويم", const EnhancedCalendar(), 1200),
-                  _buildAnimatedCategory(FontAwesomeIcons.bookOpen, isEnglish ? "Ahadith" : "الأحاديث", const HadithScreen(), 1300),
-                ]),
-                SizedBox(height: screenHeight * 0.04),
-              ],
+                  SizedBox(height: screenHeight * 0.03),
+
+                  FutureBuilder<Map<String, dynamic>>(
+                    future: _surahFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done &&
+                          snapshot.hasData) {
+                        return DailyAyatCard(
+                          currentSora: snapshot.data!['name'],
+                          surahId: snapshot.data!['id'],
+                          accentColor: accentColor,
+                          cardColor: cardColor,
+                          textColor: textColor,
+                        ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2);
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+
+                  SizedBox(height: screenHeight * 0.03),
+
+                  _buildCategoryRow(isEnglish, [
+                    _buildAnimatedCategory(FontAwesomeIcons.bookQuran, isEnglish ? "Quran" : "القرآن", const QuranPage(), 700),
+                    _buildAnimatedCategory(FontAwesomeIcons.handsPraying, isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 800),
+                    _buildAnimatedCategory(FontAwesomeIcons.mosque, isEnglish ? "Prayers" : "الصلاة", const PrayerTimesPage(), 900),
+                  ]),
+                  SizedBox(height: screenHeight * 0.025),
+                  _buildCategoryRow(isEnglish, [
+                    _buildAnimatedCategory(FontAwesomeIcons.kaaba, isEnglish ? "Counter" : "التسبيح", const Counter(), 1000),
+                    _buildAnimatedCategory(FontAwesomeIcons.calendarDays, isEnglish ? "Calendar" : "التقويم", const EnhancedCalendar(), 1100),
+                    _buildAnimatedCategory(FontAwesomeIcons.bookOpen, isEnglish ? "Ahadith" : "الأحاديث", const HadithScreen(), 1200),
+                  ]),
+
+                  SizedBox(height: screenHeight * 0.04),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
