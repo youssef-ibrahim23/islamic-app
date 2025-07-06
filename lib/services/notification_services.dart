@@ -40,26 +40,10 @@ class NotificationService {
     tzData.initializeTimeZones();
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    final iosInit = DarwinInitializationSettings(
+    final iosInit = const DarwinInitializationSettings(
       requestSoundPermission: true,
       requestAlertPermission: true,
       requestBadgePermission: true,
-      notificationCategories: [
-        DarwinNotificationCategory(
-          'prayer_category',
-          actions: <DarwinNotificationAction>[
-            DarwinNotificationAction.plain('snooze_id', 'Snooze'),
-            DarwinNotificationAction.plain('open_app_id', 'Open App'),
-          ],
-        ),
-        DarwinNotificationCategory(
-          'azkar_category',
-          actions: <DarwinNotificationAction>[
-            DarwinNotificationAction.plain('open_app_id', 'Open App'),
-            DarwinNotificationAction.plain('read_now_id', 'Read Now'),
-          ],
-        ),
-      ],
     );
 
     final initSettings = InitializationSettings(
@@ -80,27 +64,9 @@ class NotificationService {
 
   void _handleNotificationResponse(NotificationResponse response) {
   final payload = response.payload ?? '';
-  final actionId = response.actionId;
   final navigator = Globals.navigatorKey.currentState;
 
   if (navigator == null) return;
-
-  // Handle action buttons
-  if (actionId == 'snooze_id') {
-    // Implement snooze logic (or just show a SnackBar or print for now)
-    debugPrint("Snooze pressed");
-    return;
-  } else if (actionId == 'open_app_id') {
-    navigator.pushReplacement(
-      MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
-    );
-    return;
-  } else if (actionId == 'read_now_id') {
-    navigator.pushReplacement(
-      MaterialPageRoute(builder: (_) => const AzkarPage()),
-    );
-    return;
-  }
 
   // Handle general tap (no action ID)
   if (payload.startsWith('prayer_')) {
@@ -204,17 +170,6 @@ class NotificationService {
         htmlFormatBigText: true,
         summaryText: isEnglish ? 'Tap to open app' : 'انقر لفتح التطبيق',
       ),
-      actions: [
-        const AndroidNotificationAction(
-          'snooze_id',
-          'Snooze',
-          showsUserInterface: true,
-        ),
-        const AndroidNotificationAction(
-          'open_app_id',
-          'Open App',
-        ),
-      ],
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -420,18 +375,6 @@ class NotificationService {
         htmlFormatBigText: true,
         summaryText: isEnglish ? 'Tap to open app' : 'انقر لفتح التطبيق',
       ),
-      actions: [
-        const AndroidNotificationAction(
-          'read_now_id',
-          'Read Now',
-          icon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        ),
-        const AndroidNotificationAction(
-          'open_app_id',
-          'Open App',
-          icon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        ),
-      ],
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -507,18 +450,6 @@ class NotificationService {
         htmlFormatBigText: true,
         summaryText: isEnglish ? 'Tap to open app' : 'انقر لفتح التطبيق',
       ),
-      actions: [
-        const AndroidNotificationAction(
-          'read_now_id',
-          'Read Now',
-          icon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        ),
-        const AndroidNotificationAction(
-          'open_app_id',
-          'Open App',
-          icon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        ),
-      ],
     );
 
     const iosDetails = DarwinNotificationDetails(
