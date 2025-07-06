@@ -175,7 +175,7 @@ class NotificationService {
 
     Future.delayed(delay, () async {
       await AppLaunchService.scheduleAllAzans();
-      await AppLaunchService.scheduleDailyAzanUpdate();
+      await AppLaunchService.scheduleMonthlyAzanUpdate();
     });
   }
 }

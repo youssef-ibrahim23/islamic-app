@@ -23,7 +23,7 @@ class AppLaunchService {
     await _setupTimezoneOnce();
     await NotificationService().init();
     await scheduleAllAzans();
-    await scheduleDailyAzanUpdate();
+    await scheduleMonthlyAzanUpdate();
   }
 
   static Future<void> handleFirstRunAndPermissions() async {
@@ -121,34 +121,38 @@ class AppLaunchService {
     }
   }
 
-  static Future<void> scheduleAllAzans() async {
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+static Future<void> scheduleAllAzans() async {
+  try {
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
 
-      final now = DateTime.now();
-      final todayKey = "${now.year}-${now.month}-${now.day}";
+    final now = DateTime.now();
+    final monthKey = "${now.year}-${now.month}"; // e.g., "2025-7"
 
-      final prefs = await SharedPreferences.getInstance();
-      final savedLat = prefs.getDouble("lat");
-      final savedLon = prefs.getDouble("lon");
-      final savedDate = prefs.getString("lastDate");
+    final prefs = await SharedPreferences.getInstance();
+    final savedLat = prefs.getDouble("lat");
+    final savedLon = prefs.getDouble("lon");
+    final savedMonth = prefs.getString("lastScheduledMonth");
 
-      if (savedLat == position.latitude &&
-          savedLon == position.longitude &&
-          savedDate == todayKey) {
-        print('🕋 Azans already scheduled for today.');
-        return;
-      }
+    // 🛑 Skip if already scheduled for this month and same location
+    if (savedLat == position.latitude &&
+        savedLon == position.longitude &&
+        savedMonth == monthKey) {
+      print('🕋 Azans already scheduled for this month.');
+      return;
+    }
 
-      final coordinates = Coordinates(position.latitude, position.longitude);
-      final params = CalculationMethod.egyptian.getParameters();
-      params.madhab = Madhab.shafi;
+    final coordinates = Coordinates(position.latitude, position.longitude);
+    final params = CalculationMethod.egyptian.getParameters();
+    params.madhab = Madhab.shafi;
 
+    final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(now.year, now.month, day);
       final prayerTimes = PrayerTimes(
         coordinates,
-        DateComponents.from(now),
+        DateComponents.from(date),
         params,
       );
 
@@ -161,34 +165,50 @@ class AppLaunchService {
       };
 
       for (final entry in prayers.entries) {
-        if (entry.value.isAfter(now)) {
+        if (entry.value.isAfter(DateTime.now())) {
           await NotificationService()
               .schedulePrayerNotification(entry.key, entry.value);
         }
       }
-
-      await prefs.setDouble("lat", position.latitude);
-      await prefs.setDouble("lon", position.longitude);
-      await prefs.setString("lastDate", todayKey);
-
-      print('✅ Azans scheduled.');
-    } catch (e) {
-      print('❌ Error scheduling azans: $e');
     }
+
+    await prefs.setDouble("lat", position.latitude);
+    await prefs.setDouble("lon", position.longitude);
+    await prefs.setString("lastScheduledMonth", monthKey);
+
+    print('✅ All azans scheduled for this month.');
+  } catch (e) {
+    print('❌ Error scheduling monthly azans: $e');
+  }
+}
+
+
+  static Future<void> scheduleMonthlyAzanUpdate() async {
+  final now = tz.TZDateTime.now(tz.local);
+  final nextMonth = now.month == 12 ? 1 : now.month + 1;
+  final nextYear = now.month == 12 ? now.year + 1 : now.year;
+
+  final prefs = await SharedPreferences.getInstance();
+  final lastScheduled = prefs.getString("lastMonthlyAzanUpdate");
+
+  final nextKey = "$nextYear-$nextMonth";
+  if (lastScheduled == nextKey) {
+    print('🔄 Monthly azan update already scheduled for $nextKey.');
+    return;
   }
 
-  static Future<void> scheduleDailyAzanUpdate() async {
-    final now = tz.TZDateTime.now(tz.local);
-    final tomorrow = now.add(const Duration(days: 1));
-    final nextRun = tz.TZDateTime(
-      tz.local,
-      tomorrow.year,
-      tomorrow.month,
-      tomorrow.day,
-      4,
-    );
+  final nextRun = tz.TZDateTime(
+    tz.local,
+    nextYear,
+    nextMonth,
+    1,
+    4, // 4:00 AM
+  );
 
-    await NotificationService().scheduleBackgroundTask(nextRun);
-    print('⏰ Daily azan update scheduled.');
-  }
+  await NotificationService().scheduleBackgroundTask(nextRun);
+  await prefs.setString("lastMonthlyAzanUpdate", nextKey);
+
+  print('📅 Monthly azan update scheduled for: $nextRun');
+}
+
 }

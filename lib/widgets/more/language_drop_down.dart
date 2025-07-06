@@ -1,5 +1,7 @@
 // lib/widgets/settings/language_dropdown.dart
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/screens/bottom_bar.dart';
@@ -76,7 +78,7 @@ class LanguageDropDown extends StatelessWidget {
         });
 
         await sharedPreferences.setBool("language", Globals.languageState!);
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const BottomBar()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const BottomBar()));
       },
     );
   }
