@@ -16,7 +16,6 @@ class PrayerTimesService {
     _prefs ??= await SharedPreferences.getInstance();
   }
 
-  /// Entry method to check location and navigate or init
   static Future<void> checkLocationAndNavigate(
     BuildContext context,
     VoidCallback onStateChanged,
@@ -82,15 +81,18 @@ class PrayerTimesService {
       await _prefs!.setString('governorateEnglish', rawGovernorate);
       await _prefs!.setString('governorateArabic', governorateAr);
 
+      // Save coordinates
+      await _prefs!.setDouble('lat', position.latitude);
+      await _prefs!.setDouble('lng', position.longitude);
+
       Globals.currentLocation =
           "${getLocalizedString(rawGovernorate, governorateAr)}, ${getLocalizedString(rawCountry, countryAr)}";
       Globals.locationSelected = true;
-      Globals.coordinates =
-          Locations().governorateCoordinates[rawGovernorate] ??  Coordinates(30.0444, 31.2357);
+      Globals.coordinates = Coordinates(position.latitude, position.longitude);
 
       await _initializePrayerTimes(onStateChanged);
     } catch (e) {
-      debugPrint("📍 Location detection failed: $e");
+      debugPrint("\u{1F4CD} Location detection failed: $e");
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -133,8 +135,16 @@ class PrayerTimesService {
     if (country != null && governorate != null) {
       Globals.currentLocation = "$governorate, $country";
       Globals.locationSelected = true;
-      Globals.coordinates =
-          Locations().governorateCoordinates[governorate] ??  Coordinates(30.0444, 31.2357);
+
+      final lat = _prefs!.getDouble('lat');
+      final lng = _prefs!.getDouble('lng');
+
+      if (lat != null && lng != null) {
+        Globals.coordinates = Coordinates(lat, lng);
+      } else {
+        Globals.coordinates = Locations().governorateCoordinates[governorate] ??
+            Coordinates(30.0444, 31.2357);
+      }
     }
 
     await _initializePrayerTimes(onStateChanged);
@@ -159,8 +169,9 @@ class PrayerTimesService {
       _calculateAndStartCountdown(prayerTimes, onStateChanged);
     } catch (e) {
       Globals.prayerTimesIsLoading = false;
-      Globals.nextPrayer = Globals.languageState! ? "Error" : "خطأ";
-      Globals.nextPrayerTime = Globals.languageState! ? "Unable to calculate" : "تعذر الحساب";
+      Globals.nextPrayer = Globals.languageState! ? "Error" : "\u062e\u0637\u0623";
+      Globals.nextPrayerTime =
+          Globals.languageState! ? "Unable to calculate" : "\u062a\u0639\u0630\u0631 \u0627\u0644\u062d\u0633\u0627\u0628";
       Globals.timeRemaining = "";
       onStateChanged();
     }
@@ -187,7 +198,6 @@ class PrayerTimesService {
       }
     }
 
-    // After Isha — prepare for next day's Fajr
     final tomorrow = now.add(const Duration(days: 1));
     final params = CalculationMethod.egyptian.getParameters()..madhab = Madhab.shafi;
     final tomorrowFajr = PrayerTimes(

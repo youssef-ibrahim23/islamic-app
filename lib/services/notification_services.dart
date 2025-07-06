@@ -556,7 +556,7 @@ class NotificationService {
           ? 'Prayer times are being updated automatically'
           : 'يتم الآن تحديث مواعيد الصلاة تلقائيًا',
       time,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,

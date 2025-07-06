@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,24 +11,40 @@ import 'package:adhan/adhan.dart';
 
 import 'package:islamic_app/services/exact_alarm_permission.dart';
 import 'package:islamic_app/services/notification_services.dart';
+import 'package:islamic_app/models/Azkar.dart';
 import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
   static bool _timezoneInitialized = false;
 
+  static const Map<String, String> _tzMap = {
+    'EG': 'Africa/Cairo',
+    'SA': 'Asia/Riyadh',
+    'US': 'America/New_York',
+    'IN': 'Asia/Kolkata',
+    'ID': 'Asia/Jakarta',
+    'TR': 'Europe/Istanbul',
+    'MA': 'Africa/Casablanca',
+    'PK': 'Asia/Karachi',
+    'DZ': 'Africa/Algiers',
+    'IQ': 'Asia/Baghdad',
+  };
+
   static Future<void> initializeApp() async {
     Globals.languageState = false;
 
-    await handleFirstRunAndPermissions();
+    await _handleFirstRunAndPermissions();
     await _handleExactAlarmPermission();
-    await _setupTimezoneOnce();
     await NotificationService().init();
-    await scheduleAllAzans();
-    await scheduleDailyAzkarReminders();
-    await scheduleMonthlyAzanUpdate();
+    await _setupTimezoneOnce();
+
+    // Defer long-running operations
+    Future.microtask(() async {
+      await _trySetupLocationAndSchedule();
+    });
   }
 
-  static Future<void> handleFirstRunAndPermissions() async {
+  static Future<void> _handleFirstRunAndPermissions() async {
     final prefs = await SharedPreferences.getInstance();
     final isFirstRun = prefs.getBool('first_run') ?? true;
 
@@ -50,11 +67,17 @@ class AppLaunchService {
   }
 
   static Future<void> _requestEssentialPermissions() async {
-    await [
+    final statuses = await [
       Permission.locationWhenInUse,
       Permission.notification,
       Permission.scheduleExactAlarm,
     ].request();
+
+    statuses.forEach((permission, status) {
+      if (!status.isGranted) {
+        debugPrint('⚠️ Permission not granted: $permission');
+      }
+    });
   }
 
   static Future<void> _handleExactAlarmPermission() async {
@@ -68,73 +91,74 @@ class AppLaunchService {
     if (_timezoneInitialized) return;
     _timezoneInitialized = true;
 
-    Position? position;
-    String timezoneName = 'Africa/Cairo';
+    String timezoneName = 'Africa/Cairo'; // default
+    final prefs = await SharedPreferences.getInstance();
 
     try {
-      final permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
       }
 
-      position = await Geolocator.getCurrentPosition(
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception("Location permission denied");
+      }
+
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 8),
       );
+
+      await prefs.setDouble("lat", position.latitude);
+      await prefs.setDouble("lng", position.longitude);
+
+      final placemarks = await geocoding.placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      final countryCode = placemarks.first.isoCountryCode;
+      if (countryCode != null && _tzMap.containsKey(countryCode)) {
+        timezoneName = _tzMap[countryCode]!;
+      }
     } catch (e) {
-      print('⚠️ Failed to get location: $e');
-    }
-
-    if (position != null) {
-      try {
-        final placemarks = await geocoding.placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        );
-
-        if (placemarks.isNotEmpty) {
-          final countryCode = placemarks.first.isoCountryCode;
-          const tzMap = {
-            'EG': 'Africa/Cairo',
-            'SA': 'Asia/Riyadh',
-            'US': 'America/New_York',
-            'IN': 'Asia/Kolkata',
-            'ID': 'Asia/Jakarta',
-            'TR': 'Europe/Istanbul',
-            'MA': 'Africa/Casablanca',
-            'PK': 'Asia/Karachi',
-            'DZ': 'Africa/Algiers',
-            'IQ': 'Asia/Baghdad',
-          };
-
-          if (countryCode != null && tzMap.containsKey(countryCode)) {
-            timezoneName = tzMap[countryCode]!;
-          }
-        }
-      } catch (e) {
-        print('❌ Geocoding error: $e');
+      debugPrint("⚠️ Failed to fetch location, using saved or default: $e");
+      final lat = prefs.getDouble("lat");
+      final lng = prefs.getDouble("lng");
+      if (lat != null && lng != null) {
+        debugPrint('✅ Using saved location: ($lat, $lng)');
       }
     }
 
     try {
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation(timezoneName));
-      print('⏰ Timezone set: $timezoneName');
+      debugPrint('⏰ Timezone set to: $timezoneName');
     } catch (e) {
-      print('❌ Failed to initialize timezone: $e');
+      debugPrint('❌ Failed to set timezone: $e');
+    }
+  }
+
+  static Future<void> _trySetupLocationAndSchedule() async {
+    try {
+      await _setupTimezoneOnce();
+      await scheduleAllAzans();
+      await scheduleDailyAzkarReminders();
+      await scheduleMonthlyAzanUpdate();
+    } catch (e) {
+      debugPrint('❌ Failed deferred setup: $e');
     }
   }
 
   static Future<void> scheduleAllAzans() async {
     try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
       final now = DateTime.now();
       final monthKey = "${now.year}-${now.month}";
-
+      final position = await Geolocator.getCurrentPosition();
       final prefs = await SharedPreferences.getInstance();
+
       final savedLat = prefs.getDouble("lat");
       final savedLon = prefs.getDouble("lon");
       final savedMonth = prefs.getString("lastScheduledMonth");
@@ -142,13 +166,13 @@ class AppLaunchService {
       if (savedLat == position.latitude &&
           savedLon == position.longitude &&
           savedMonth == monthKey) {
-        print('🕋 Azans already scheduled for this month.');
+        debugPrint('🕋 Azans already scheduled for this month.');
         return;
       }
 
       final coordinates = Coordinates(position.latitude, position.longitude);
-      final params = CalculationMethod.egyptian.getParameters();
-      params.madhab = Madhab.shafi;
+      final params = CalculationMethod.egyptian.getParameters()
+        ..madhab = Madhab.shafi;
 
       final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
       for (int day = 1; day <= daysInMonth; day++) {
@@ -168,38 +192,31 @@ class AppLaunchService {
         };
 
         for (final entry in prayers.entries) {
-          final prayerName = entry.key;
           final prayerTime = entry.value;
-
-          final minutesDiff = prayerTime.difference(DateTime.now()).inMinutes;
-          if (minutesDiff > 1) {
-            print("🔔 Scheduling $prayerName on $prayerTime");
+          final diff = prayerTime.difference(DateTime.now()).inMinutes;
+          if (diff > 1) {
             await NotificationService()
-                .schedulePrayerNotification(prayerName, prayerTime);
-          } else {
-            print("⏩ Skipping $prayerName on $prayerTime (too close or past)");
+                .schedulePrayerNotification(entry.key, prayerTime);
           }
         }
       }
 
-      await prefs.setDouble("lat", position.latitude);
-      await prefs.setDouble("lon", position.longitude);
-      await prefs.setString("lastScheduledMonth", monthKey);
+      prefs
+        ..setDouble("lat", position.latitude)
+        ..setDouble("lon", position.longitude)
+        ..setString("lastScheduledMonth", monthKey);
 
-      print('✅ All azans scheduled for this month.');
+      debugPrint('✅ Azans scheduled for $monthKey');
     } catch (e) {
-      print('❌ Error scheduling monthly azans: $e');
+      debugPrint('❌ Error scheduling azans: $e');
     }
   }
 
   static Future<void> scheduleDailyAzkarReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final lastScheduled = prefs.getBool('azkar_scheduled') ?? false;
+    final alreadyScheduled = prefs.getBool('azkar_scheduled') ?? false;
 
-    if (lastScheduled) {
-      print('🔄 Azkar reminders already scheduled');
-      return;
-    }
+    if (alreadyScheduled) return;
 
     try {
       await NotificationService().scheduleAzkarReminder(
@@ -221,32 +238,30 @@ class AppLaunchService {
       );
 
       await prefs.setBool('azkar_scheduled', true);
-      print('✅ Daily Azkar reminders scheduled');
+      debugPrint('✅ Azkar reminders scheduled');
     } catch (e) {
-      print('❌ Error scheduling Azkar reminders: $e');
+      debugPrint('❌ Failed to schedule azkar: $e');
     }
   }
 
   static Future<void> scheduleMonthlyAzanUpdate() async {
-    final now = tz.TZDateTime.now(tz.local);
-    final nextMonth = now.month == 12 ? 1 : now.month + 1;
-    final nextYear = now.month == 12 ? now.year + 1 : now.year;
-    final nextKey = "$nextYear-$nextMonth";
+    try {
+      final now = tz.TZDateTime.now(tz.local);
+      final nextMonth = now.month == 12 ? 1 : now.month + 1;
+      final nextYear = now.month == 12 ? now.year + 1 : now.year;
+      final nextKey = "$nextYear-$nextMonth";
+      final prefs = await SharedPreferences.getInstance();
 
-    final prefs = await SharedPreferences.getInstance();
-    final lastScheduled = prefs.getString("lastMonthlyAzanUpdate");
+      if (prefs.getString("lastMonthlyAzanUpdate") == nextKey) return;
 
-    if (lastScheduled == nextKey) {
-      print('🔄 Monthly azan update already scheduled for $nextKey.');
-      return;
+      final nextRun = tz.TZDateTime(tz.local, nextYear, nextMonth, 1, 4);
+      await NotificationService().scheduleBackgroundTask(nextRun);
+      await prefs.setString("lastMonthlyAzanUpdate", nextKey);
+
+      debugPrint('📅 Monthly azan update scheduled: $nextRun');
+    } catch (e) {
+      debugPrint('❌ Monthly azan update failed: $e');
     }
-
-    final nextRun = tz.TZDateTime(tz.local, nextYear, nextMonth, 1, 4);
-
-    await NotificationService().scheduleBackgroundTask(nextRun);
-    await prefs.setString("lastMonthlyAzanUpdate", nextKey);
-
-    print('📅 Monthly azan update scheduled for: $nextRun');
   }
 
   static Future<void> rescheduleAllNotifications() async {
@@ -263,9 +278,9 @@ class AppLaunchService {
       await scheduleDailyAzkarReminders();
       await scheduleMonthlyAzanUpdate();
 
-      print('🔄 All notifications rescheduled successfully');
+      debugPrint('🔁 Rescheduled all notifications');
     } catch (e) {
-      print('❌ Error rescheduling notifications: $e');
+      debugPrint('❌ Rescheduling failed: $e');
     }
   }
 }

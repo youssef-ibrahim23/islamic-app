@@ -8,6 +8,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/compass_service.dart';
 import 'package:islamic_app/widgets/app_them.dart';
@@ -37,7 +38,11 @@ class _CompassPageState extends State<CompassPage>
   bool _permissionDenied = false;
   bool _checkingPermission = true;
   bool _showLocationInfo = false;
+
   Position? _currentPosition;
+  double? _storedLatitude;
+  double? _storedLongitude;
+
   StreamSubscription<Position>? _positionStream;
 
   @override
@@ -47,11 +52,25 @@ class _CompassPageState extends State<CompassPage>
     _initializeAnimations();
     _checkLocationPermission();
     _startLocationUpdates();
+    _loadStoredLocation(); // Load stored location
+  }
+
+  Future<void> _loadStoredLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lat = prefs.getDouble("lat");
+    final lng = prefs.getDouble("lng");
+
+    if (lat != null && lng != null) {
+      setState(() {
+        _storedLatitude = lat;
+        _storedLongitude = lng;
+      });
+    }
   }
 
   Future<void> _checkLocationPermission() async {
     if (!mounted) return;
-    
+
     setState(() {
       _checkingPermission = true;
       _permissionDenied = false;
@@ -59,7 +78,7 @@ class _CompassPageState extends State<CompassPage>
 
     try {
       final status = await Permission.location.status;
-      
+
       if (status.isGranted) {
         _initializeCompass();
       } else {
@@ -254,7 +273,10 @@ class _CompassPageState extends State<CompassPage>
   }
 
   Widget _buildLocationInfo() {
-    if (_currentPosition == null) return const SizedBox.shrink();
+    final lat = _currentPosition?.latitude ?? _storedLatitude;
+    final lng = _currentPosition?.longitude ?? _storedLongitude;
+
+    if (lat == null || lng == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -276,7 +298,7 @@ class _CompassPageState extends State<CompassPage>
                 ),
               ),
               Text(
-                _currentPosition!.latitude.toStringAsFixed(6),
+                lat.toStringAsFixed(6),
                 style: GoogleFonts.poppins(
                   color: primaryColor,
                   fontSize: 14,
@@ -297,7 +319,7 @@ class _CompassPageState extends State<CompassPage>
                 ),
               ),
               Text(
-                _currentPosition!.longitude.toStringAsFixed(6),
+                lng.toStringAsFixed(6),
                 style: GoogleFonts.poppins(
                   color: primaryColor,
                   fontSize: 14,
