@@ -21,7 +21,7 @@ class Globals {
   /// ----------------------------
   static String currentSora = languageState! ? "Al-Fatiha" : "الفاتحة";
   static int? surahId;
-  static bool? languageState;
+  static bool? languageState = false;
 
   /// ----------------------------
   /// Azkar & Counters

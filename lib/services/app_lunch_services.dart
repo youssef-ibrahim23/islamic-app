@@ -10,13 +10,11 @@ import 'package:adhan/adhan.dart';
 
 import 'package:islamic_app/services/exact_alarm_permission.dart';
 import 'package:islamic_app/services/notification_services.dart';
-import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
   static bool _timezoneInitialized = false;
 
   static Future<void> initializeApp() async {
-    Globals.languageState = true;
 
     await handleFirstRunAndPermissions();
     await _handleExactAlarmPermission();
@@ -38,6 +36,7 @@ class AppLaunchService {
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
         }
+        prefs.clear();
       } catch (e) {
         debugPrint("Temp directory cleanup failed: $e");
       }
