@@ -13,11 +13,11 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
-    <!-- ✅ Backward compatibility for storage access on Android 12 and below -->
+    <!-- ✅ For Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
-    <!-- ✅ Optional features (don’t crash if hardware not available) -->
+    <!-- ✅ Optional hardware features -->
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <uses-feature android:name="android.hardware.location.network" android:required="false" />
 
@@ -49,7 +49,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ Notification Receivers -->
+        <!-- ✅ Flutter Local Notifications: Boot Receiver -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
             android:exported="false"
@@ -60,9 +60,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- ✅ Flutter Local Notifications: Scheduled Receiver -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
+
+        <!-- ✅ Flutter Local Notifications: Foreground Service (for action buttons / background use) -->
+        <service
+            android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback|location|dataSync" />
 
         <!-- ✅ Flutter versioning metadata -->
         <meta-data

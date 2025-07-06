@@ -79,27 +79,47 @@ class NotificationService {
   }
 
   void _handleNotificationResponse(NotificationResponse response) {
-    final payload = response.payload ?? '';
-    final navigator = Globals.navigatorKey.currentState;
+  final payload = response.payload ?? '';
+  final actionId = response.actionId;
+  final navigator = Globals.navigatorKey.currentState;
 
-    if (navigator == null) return;
+  if (navigator == null) return;
 
-    if (payload.startsWith('prayer_')) {
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
-      );
-    } else if (payload == 'quran_reminder') {
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => const QuranPage()),
-      );
-    } else if (payload == 'morning_azkar' || 
-              payload == 'evening_azkar' || 
-              payload == 'sleeping_azkar') {
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => const AzkarPage()),
-      );
-    }
+  // Handle action buttons
+  if (actionId == 'snooze_id') {
+    // Implement snooze logic (or just show a SnackBar or print for now)
+    debugPrint("Snooze pressed");
+    return;
+  } else if (actionId == 'open_app_id') {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
+    );
+    return;
+  } else if (actionId == 'read_now_id') {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const AzkarPage()),
+    );
+    return;
   }
+
+  // Handle general tap (no action ID)
+  if (payload.startsWith('prayer_')) {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
+    );
+  } else if (payload == 'quran_reminder') {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const QuranPage()),
+    );
+  } else if (payload == 'morning_azkar' || 
+             payload == 'evening_azkar' || 
+             payload == 'sleeping_azkar') {
+    navigator.pushReplacement(
+      MaterialPageRoute(builder: (_) => const AzkarPage()),
+    );
+  }
+}
+
 
   Future<void> _requestPermissions() async {
     final status = await Permission.notification.status;

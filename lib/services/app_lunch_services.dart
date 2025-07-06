@@ -11,7 +11,6 @@ import 'package:adhan/adhan.dart';
 
 import 'package:islamic_app/services/exact_alarm_permission.dart';
 import 'package:islamic_app/services/notification_services.dart';
-import 'package:islamic_app/models/Azkar.dart';
 import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
