@@ -92,34 +92,31 @@ class _CounterState extends State<Counter> {
                   ),
                 ),
                 child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Counter display
-                        Container(
-                          width: isPortrait ? size.width * 0.6 : size.height * 0.6,
-                          height: isPortrait ? size.width * 0.6 : size.height * 0.6,
-                          decoration: BoxDecoration(
-                            color: cardColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 15,
-                                spreadRadius: 2,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              transitionBuilder: (child, animation) =>
-                                  ScaleTransition(scale: animation, child: child),
+                  child: GestureDetector(
+  onTap: _incrementCounter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Counter display
+                          Container(
+                            width: isPortrait ? size.width * 0.6 : size.height * 0.6,
+                            height: isPortrait ? size.width * 0.6 : size.height * 0.6,
+                            decoration: BoxDecoration(
+                              color: cardColor,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: Center(
                               child: Text(
-                                key: ValueKey<int>(_counter),
                                 Globals.languageState!
                                     ? '$_counter'
                                     : Globals.toArabicNumber(_counter.toString()),
@@ -132,41 +129,42 @@ class _CounterState extends State<Counter> {
                                   fontFamily: Globals.languageState! ? 'Roboto' : 'Tajawal',
                                 ),
                               ),
+                    
+                            ),
+                          ).animate().fadeIn(duration: 500.ms).scale(),
+                    
+                          SizedBox(height: isPortrait ? size.height * 0.05 : size.width * 0.05),
+                    
+                          // Increment button
+                          CounterButton(
+                            isPressed: _isPressed,
+                            onTap: _incrementCounter,
+                            size: isPortrait ? size.width * 0.5 : size.height * 0.5,
+                            color: primaryColor,
+                          ),
+                    
+                          SizedBox(height: isPortrait ? size.height * 0.03 : size.width * 0.03),
+                    
+                          // Reset button
+                          TextButton(
+                            onPressed: _resetCounter,
+                            style: TextButton.styleFrom(
+                              foregroundColor: secondaryTextColor,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isPortrait ? size.width * 0.1 : size.height * 0.1,
+                                vertical: isPortrait ? size.height * 0.02 : size.width * 0.02,
+                              ),
+                            ),
+                            child: Text(
+                              Globals.languageState! ? 'Reset' : 'اعادة',
+                              style: TextStyle(
+                                fontSize: isPortrait ? size.width * 0.045 : size.height * 0.045,
+                                fontFamily: Globals.languageState! ? 'Roboto' : 'Tajawal',
+                              ),
                             ),
                           ),
-                        ).animate().fadeIn(duration: 500.ms).scale(),
-
-                        SizedBox(height: isPortrait ? size.height * 0.05 : size.width * 0.05),
-
-                        // Increment button
-                        CounterButton(
-                          isPressed: _isPressed,
-                          onTap: _incrementCounter,
-                          size: isPortrait ? size.width * 0.5 : size.height * 0.5,
-                          color: primaryColor,
-                        ),
-
-                        SizedBox(height: isPortrait ? size.height * 0.03 : size.width * 0.03),
-
-                        // Reset button
-                        TextButton(
-                          onPressed: _resetCounter,
-                          style: TextButton.styleFrom(
-                            foregroundColor: secondaryTextColor,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isPortrait ? size.width * 0.1 : size.height * 0.1,
-                              vertical: isPortrait ? size.height * 0.02 : size.width * 0.02,
-                            ),
-                          ),
-                          child: Text(
-                            Globals.languageState! ? 'Reset' : 'اعادة',
-                            style: TextStyle(
-                              fontSize: isPortrait ? size.width * 0.045 : size.height * 0.045,
-                              fontFamily: Globals.languageState! ? 'Roboto' : 'Tajawal',
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -61,7 +61,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final isEnglish = Globals.languageState ?? true;
+    final isEnglish = Globals.languageState ?? false;
 
     return Scaffold(
       body: Stack(

@@ -10,17 +10,20 @@ import 'package:adhan/adhan.dart';
 
 import 'package:islamic_app/services/exact_alarm_permission.dart';
 import 'package:islamic_app/services/notification_services.dart';
+import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
   static bool _timezoneInitialized = false;
 
   static Future<void> initializeApp() async {
+    Globals.languageState = false;
 
     await handleFirstRunAndPermissions();
     await _handleExactAlarmPermission();
     await _setupTimezoneOnce();
     await NotificationService().init();
     await scheduleAllAzans();
+    await scheduleDailyAzkarReminders();
     await scheduleMonthlyAzanUpdate();
   }
 
@@ -29,18 +32,24 @@ class AppLaunchService {
     final isFirstRun = prefs.getBool('first_run') ?? true;
 
     if (isFirstRun) {
+      // Clear all saved preferences
+      await prefs.clear();
+
+      // Set 'first_run' to false AFTER clearing
       await prefs.setBool('first_run', false);
 
       try {
+        // Delete temp cache directory
         final tempDir = await getTemporaryDirectory();
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
+          debugPrint("✅ Temp directory cleared on first run.");
         }
-        prefs.clear();
       } catch (e) {
-        debugPrint("Temp directory cleanup failed: $e");
+        debugPrint("❌ Temp directory cleanup failed: $e");
       }
     }
+
     await _requestEssentialPermissions();
   }
 
@@ -48,8 +57,8 @@ class AppLaunchService {
     await [
       Permission.locationWhenInUse,
       Permission.notification,
+      Permission.scheduleExactAlarm,
     ].request();
-
   }
 
   static Future<void> _handleExactAlarmPermission() async {
@@ -120,94 +129,146 @@ class AppLaunchService {
     }
   }
 
-static Future<void> scheduleAllAzans() async {
-  try {
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+  static Future<void> scheduleAllAzans() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-    final now = DateTime.now();
-    final monthKey = "${now.year}-${now.month}"; // e.g., "2025-7"
+      final now = DateTime.now();
+      final monthKey = "${now.year}-${now.month}"; // e.g., "2025-7"
 
+      final prefs = await SharedPreferences.getInstance();
+      final savedLat = prefs.getDouble("lat");
+      final savedLon = prefs.getDouble("lon");
+      final savedMonth = prefs.getString("lastScheduledMonth");
+
+      // Skip if already scheduled for this month and same location
+      if (savedLat == position.latitude &&
+          savedLon == position.longitude &&
+          savedMonth == monthKey) {
+        print('🕋 Azans already scheduled for this month.');
+        return;
+      }
+
+      final coordinates = Coordinates(position.latitude, position.longitude);
+      final params = CalculationMethod.egyptian.getParameters();
+      params.madhab = Madhab.shafi;
+
+      final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
+      for (int day = 1; day <= daysInMonth; day++) {
+        final date = DateTime(now.year, now.month, day);
+        final prayerTimes = PrayerTimes(
+          coordinates,
+          DateComponents.from(date),
+          params,
+        );
+
+        final prayers = {
+          "الفجر": prayerTimes.fajr,
+          "الظهر": prayerTimes.dhuhr,
+          "العصر": prayerTimes.asr,
+          "المغرب": prayerTimes.maghrib,
+          "العشاء": prayerTimes.isha,
+        };
+
+        for (final entry in prayers.entries) {
+          if (entry.value.isAfter(DateTime.now())) {
+            await NotificationService()
+                .schedulePrayerNotification(entry.key, entry.value);
+          }
+        }
+      }
+
+      await prefs.setDouble("lat", position.latitude);
+      await prefs.setDouble("lon", position.longitude);
+      await prefs.setString("lastScheduledMonth", monthKey);
+
+      print('✅ All azans scheduled for this month.');
+    } catch (e) {
+      print('❌ Error scheduling monthly azans: $e');
+    }
+  }
+
+  static Future<void> scheduleDailyAzkarReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedLat = prefs.getDouble("lat");
-    final savedLon = prefs.getDouble("lon");
-    final savedMonth = prefs.getString("lastScheduledMonth");
+    final lastScheduled = prefs.getBool('azkar_scheduled') ?? false;
 
-    // 🛑 Skip if already scheduled for this month and same location
-    if (savedLat == position.latitude &&
-        savedLon == position.longitude &&
-        savedMonth == monthKey) {
-      print('🕋 Azans already scheduled for this month.');
+    if (lastScheduled) {
+      print('🔄 Azkar reminders already scheduled');
       return;
     }
 
-    final coordinates = Coordinates(position.latitude, position.longitude);
-    final params = CalculationMethod.egyptian.getParameters();
-    params.madhab = Madhab.shafi;
-
-    final daysInMonth = DateUtils.getDaysInMonth(now.year, now.month);
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(now.year, now.month, day);
-      final prayerTimes = PrayerTimes(
-        coordinates,
-        DateComponents.from(date),
-        params,
+    try {
+      // Schedule morning azkar at sunrise (adjust time as needed)
+      await NotificationService().scheduleAzkarReminder(
+        id: NotificationService.morningAzkarId,
+        time: const TimeOfDay(hour: 6, minute: 0),
+        isMorning: true,
       );
 
-      final prayers = {
-        "الفجر": prayerTimes.fajr,
-        "الظهر": prayerTimes.dhuhr,
-        "العصر": prayerTimes.asr,
-        "المغرب": prayerTimes.maghrib,
-        "العشاء": prayerTimes.isha,
-      };
+      // Schedule evening azkar at sunset (adjust time as needed)
+      await NotificationService().scheduleAzkarReminder(
+        id: NotificationService.eveningAzkarId,
+        time: const TimeOfDay(hour: 18, minute: 0),
+        isMorning: false,
+      );
 
-      for (final entry in prayers.entries) {
-        if (entry.value.isAfter(DateTime.now())) {
-          await NotificationService()
-              .schedulePrayerNotification(entry.key, entry.value);
-        }
-      }
+      await prefs.setBool('azkar_scheduled', true);
+      print('✅ Morning and evening azkar reminders scheduled');
+    } catch (e) {
+      print('❌ Error scheduling azkar reminders: $e');
     }
-
-    await prefs.setDouble("lat", position.latitude);
-    await prefs.setDouble("lon", position.longitude);
-    await prefs.setString("lastScheduledMonth", monthKey);
-
-    print('✅ All azans scheduled for this month.');
-  } catch (e) {
-    print('❌ Error scheduling monthly azans: $e');
   }
-}
-
 
   static Future<void> scheduleMonthlyAzanUpdate() async {
-  final now = tz.TZDateTime.now(tz.local);
-  final nextMonth = now.month == 12 ? 1 : now.month + 1;
-  final nextYear = now.month == 12 ? now.year + 1 : now.year;
+    final now = tz.TZDateTime.now(tz.local);
+    final nextMonth = now.month == 12 ? 1 : now.month + 1;
+    final nextYear = now.month == 12 ? now.year + 1 : now.year;
 
-  final prefs = await SharedPreferences.getInstance();
-  final lastScheduled = prefs.getString("lastMonthlyAzanUpdate");
+    final prefs = await SharedPreferences.getInstance();
+    final lastScheduled = prefs.getString("lastMonthlyAzanUpdate");
 
-  final nextKey = "$nextYear-$nextMonth";
-  if (lastScheduled == nextKey) {
-    print('🔄 Monthly azan update already scheduled for $nextKey.');
-    return;
+    final nextKey = "$nextYear-$nextMonth";
+    if (lastScheduled == nextKey) {
+      print('🔄 Monthly azan update already scheduled for $nextKey.');
+      return;
+    }
+
+    final nextRun = tz.TZDateTime(
+      tz.local,
+      nextYear,
+      nextMonth,
+      1,
+      4, // 4:00 AM
+    );
+
+    await NotificationService().scheduleBackgroundTask(nextRun);
+    await prefs.setString("lastMonthlyAzanUpdate", nextKey);
+
+    print('📅 Monthly azan update scheduled for: $nextRun');
   }
 
-  final nextRun = tz.TZDateTime(
-    tz.local,
-    nextYear,
-    nextMonth,
-    1,
-    4, // 4:00 AM
-  );
+  static Future<void> rescheduleAllNotifications() async {
+    try {
+      // Cancel all existing notifications
+      await NotificationService().cancelAllPrayerNotifications();
+      await NotificationService().cancelAzkarReminders();
 
-  await NotificationService().scheduleBackgroundTask(nextRun);
-  await prefs.setString("lastMonthlyAzanUpdate", nextKey);
+      // Clear scheduling flags
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('lastScheduledMonth');
+      await prefs.remove('azkar_scheduled');
+      await prefs.remove('lastMonthlyAzanUpdate');
 
-  print('📅 Monthly azan update scheduled for: $nextRun');
-}
+      // Reschedule everything
+      await scheduleAllAzans();
+      await scheduleDailyAzkarReminders();
+      await scheduleMonthlyAzanUpdate();
 
+      print('🔄 All notifications rescheduled successfully');
+    } catch (e) {
+      print('❌ Error rescheduling notifications: $e');
+    }
+  }
 }
