@@ -3,7 +3,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:islamic_app/models/Azkar.dart';
 import 'package:islamic_app/screens/azkar.dart';
 import 'package:islamic_app/screens/prayer_times.dart';
 import 'package:islamic_app/screens/surahs_list.dart';
@@ -13,14 +12,16 @@ import 'package:timezone/data/latest.dart' as tzData;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:islamic_app/globals.dart';
 
-class NotificationService {
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+enum AzkarType { morning, evening, sleeping }
 
-  // Singleton
+class NotificationService {
+  // Singleton instance
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   // Notification channels
   static const String _prayerChannelId = 'prayer_channel';
@@ -33,62 +34,71 @@ class NotificationService {
   static const int quranReminderId = 999998;
   static const int morningAzkarId = 999997;
   static const int eveningAzkarId = 999996;
+  static const int sleepingAzkarId = 999995;
 
   Future<void> init() async {
     tzData.initializeTimeZones();
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     final iosInit = DarwinInitializationSettings(
-  requestSoundPermission: true,
-  requestAlertPermission: true,
-  requestBadgePermission: true,
-  notificationCategories: [
-    DarwinNotificationCategory(
-      'prayer_category',
-      actions: <DarwinNotificationAction>[
-        DarwinNotificationAction.plain('snooze_id', 'Snooze'),
-        DarwinNotificationAction.plain('open_app_id', 'Open App'),
+      requestSoundPermission: true,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'prayer_category',
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain('snooze_id', 'Snooze'),
+            DarwinNotificationAction.plain('open_app_id', 'Open App'),
+          ],
+        ),
+        DarwinNotificationCategory(
+          'azkar_category',
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain('open_app_id', 'Open App'),
+            DarwinNotificationAction.plain('read_now_id', 'Read Now'),
+          ],
+        ),
       ],
-    ),
-    DarwinNotificationCategory(
-      'azkar_category',
-      actions: <DarwinNotificationAction>[
-        DarwinNotificationAction.plain('open_app_id', 'Open App'),
-        DarwinNotificationAction.plain('read_now_id', 'Read Now'),
-      ],
-    ),
-  ],
-);
+    );
 
-final initSettings = InitializationSettings(
-  android: androidInit,
-  iOS: iosInit,
-);
-
+    final initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: iosInit,
+    );
 
     await _notificationsPlugin.initialize(
-  initSettings,
-  onDidReceiveNotificationResponse: (NotificationResponse response) {
-    final payload = response.payload ?? '';
-
-    if (payload.startsWith('prayer_')) {
-      Globals.navigatorKey.currentState?.pushReplacement(
-        MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
-      );
-    } else if (payload == 'quran_reminder') {
-      Globals.navigatorKey.currentState?.pushReplacement(
-        MaterialPageRoute(builder: (_) => const QuranPage()),
-      );
-    } else if (payload == 'morning_azkar' || payload == 'evening_azkar') {
-      Globals.navigatorKey.currentState?.pushReplacement(
-        MaterialPageRoute(builder: (_) => const AzkarPage()),
-      );
-    }
-  },
-);
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        _handleNotificationResponse(response);
+      },
+    );
     
     await _requestPermissions();
     await _createNotificationChannels();
+  }
+
+  void _handleNotificationResponse(NotificationResponse response) {
+    final payload = response.payload ?? '';
+    final navigator = Globals.navigatorKey.currentState;
+
+    if (navigator == null) return;
+
+    if (payload.startsWith('prayer_')) {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const PrayerTimesPage()),
+      );
+    } else if (payload == 'quran_reminder') {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const QuranPage()),
+      );
+    } else if (payload == 'morning_azkar' || 
+              payload == 'evening_azkar' || 
+              payload == 'sleeping_azkar') {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const AzkarPage()),
+      );
+    }
   }
 
   Future<void> _requestPermissions() async {
@@ -106,58 +116,56 @@ final initSettings = InitializationSettings(
   }
 
   Future<void> _createNotificationChannels() async {
-    const prayerChannel = AndroidNotificationChannel(
-      _prayerChannelId,
-      'Prayer Notifications',
-      description: 'Channel for prayer time alerts',
-      importance: Importance.max,
-      enableVibration: true,
-      sound: null,
-      ledColor: Color(0xFF0D47A1),
-      enableLights: true,
-    );
+    const channels = [
+      AndroidNotificationChannel(
+        _prayerChannelId,
+        'Prayer Notifications',
+        description: 'Channel for prayer time alerts',
+        importance: Importance.max,
+        enableVibration: true,
+        sound: null,
+        ledColor: Color(0xFF0D47A1),
+        enableLights: true,
+      ),
+      AndroidNotificationChannel(
+        scheduleChannelId,
+        'Prayer Time Scheduler',
+        description: 'Channel for scheduling background prayer updates',
+        importance: Importance.low,
+      ),
+      AndroidNotificationChannel(
+        quranChannelId,
+        'Quran Reminders',
+        description: 'Channel for daily Quran reading reminders',
+        importance: Importance.high,
+        enableVibration: true,
+        sound: null,
+      ),
+      AndroidNotificationChannel(
+        azkarChannelId,
+        'Azkar Reminders',
+        description: 'Channel for morning, evening and sleeping azkar reminders',
+        importance: Importance.high,
+        enableVibration: true,
+        sound: null,
+        ledColor: Color(0xFF4CAF50),
+        enableLights: true,
+      ),
+    ];
 
-    const scheduleChannel = AndroidNotificationChannel(
-      scheduleChannelId,
-      'Prayer Time Scheduler',
-      description: 'Channel for scheduling background prayer updates',
-      importance: Importance.low,
-    );
-
-    const quranChannel = AndroidNotificationChannel(
-      quranChannelId,
-      'Quran Reminders',
-      description: 'Channel for daily Quran reading reminders',
-      importance: Importance.high,
-      enableVibration: true,
-      sound: null,
-    );
-
-    const azkarChannel = AndroidNotificationChannel(
-      azkarChannelId,
-      'Azkar Reminders',
-      description: 'Channel for morning and evening azkar reminders',
-      importance: Importance.high,
-      enableVibration: true,
-      sound: null,
-      ledColor: Color(0xFF4CAF50),
-      enableLights: true,
-    );
-
-    final androidPlugin =
-        _notificationsPlugin.resolvePlatformSpecificImplementation<
+    final androidPlugin = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
     if (androidPlugin != null) {
-      await androidPlugin.createNotificationChannel(prayerChannel);
-      await androidPlugin.createNotificationChannel(scheduleChannel);
-      await androidPlugin.createNotificationChannel(quranChannel);
-      await androidPlugin.createNotificationChannel(azkarChannel);
+      for (final channel in channels) {
+        await androidPlugin.createNotificationChannel(channel);
+      }
     }
   }
 
   Future<void> showPrayerNotification(String title, {String? customBody}) async {
-    final bool isEnglish = Globals.languageState ?? true;
+    final isEnglish = Globals.languageState ?? true;
 
     final androidDetails = AndroidNotificationDetails(
       _prayerChannelId,
@@ -205,13 +213,16 @@ final initSettings = InitializationSettings(
     );
   }
 
-  Future<void> schedulePrayerNotification(String title, DateTime dateTime, 
-      {String? customBody}) async {
-    final bool isEnglish = Globals.languageState ?? true;
+  Future<void> schedulePrayerNotification(
+    String title, 
+    DateTime dateTime, {
+    String? customBody,
+  }) async {
+    final isEnglish = Globals.languageState ?? true;
     final tzTime = tz.TZDateTime.from(dateTime, tz.local);
     if (tzTime.isBefore(tz.TZDateTime.now(tz.local))) return;
 
-    final int notificationId = title.hashCode ^ dateTime.hashCode;
+    final notificationId = title.hashCode ^ dateTime.hashCode;
 
     final androidDetails = AndroidNotificationDetails(
       _prayerChannelId,
@@ -234,7 +245,7 @@ final initSettings = InitializationSettings(
 
     const iosDetails = DarwinNotificationDetails(
       presentSound: false,
-      sound:  null,
+      sound: null,
       categoryIdentifier: 'prayer_category',
       threadIdentifier: 'prayer_notifications',
     );
@@ -253,8 +264,11 @@ final initSettings = InitializationSettings(
     );
   }
 
-  Future<void> scheduleDailyQuranReminder(TimeOfDay time, {String? customMessage}) async {
-    final bool isEnglish = Globals.languageState ?? true;
+  Future<void> scheduleDailyQuranReminder(
+    TimeOfDay time, {
+    String? customMessage,
+  }) async {
+    final isEnglish = Globals.languageState ?? true;
     final now = DateTime.now();
     var scheduledTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
     
@@ -308,29 +322,34 @@ final initSettings = InitializationSettings(
   }
 
   Future<void> scheduleDailyAzkarReminders() async {
-    // Schedule morning azkar at sunrise (adjust time as needed)
-    const morningTime = TimeOfDay(hour: 6, minute: 0);
+    // Morning azkar at sunrise
     await scheduleAzkarReminder(
       id: morningAzkarId,
-      time: morningTime,
-      isMorning: true,
+      time: const TimeOfDay(hour: 6, minute: 0),
+      type: AzkarType.morning,
     );
 
-    // Schedule evening azkar at sunset (adjust time as needed)
-    const eveningTime = TimeOfDay(hour: 18, minute: 0);
+    // Evening azkar at sunset
     await scheduleAzkarReminder(
       id: eveningAzkarId,
-      time: eveningTime,
-      isMorning: false,
+      time: const TimeOfDay(hour: 18, minute: 0),
+      type: AzkarType.evening,
+    );
+
+    // Before sleeping azkar
+    await scheduleAzkarReminder(
+      id: sleepingAzkarId,
+      time: const TimeOfDay(hour: 22, minute: 0),
+      type: AzkarType.sleeping,
     );
   }
 
   Future<void> scheduleAzkarReminder({
     required int id,
     required TimeOfDay time,
-    required bool isMorning,
+    required AzkarType type,
   }) async {
-    final bool isEnglish = Globals.languageState ?? true;
+    final isEnglish = Globals.languageState ?? true;
     final now = DateTime.now();
     var scheduledTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
     
@@ -340,22 +359,34 @@ final initSettings = InitializationSettings(
     
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    final title = isMorning 
-        ? (isEnglish ? 'Morning Azkar 🌅' : 'أذكار الصباح 🌅')
-        : (isEnglish ? 'Evening Azkar 🌇' : 'أذكار المساء 🌇');
-
-    final body = isMorning
-        ? (isEnglish 
+    final (title, body, payload) = switch (type) {
+      AzkarType.morning => (
+          isEnglish ? 'Morning Azkar 🌅' : 'أذكار الصباح 🌅',
+          isEnglish 
             ? 'Start your day with remembrance of Allah. Read your morning azkar now.'
-            : 'ابدأ يومك بذكر الله. اقرأ أذكار الصباح الآن.')
-        : (isEnglish
+            : 'ابدأ يومك بذكر الله. اقرأ أذكار الصباح الآن.',
+          'morning_azkar',
+        ),
+      AzkarType.evening => (
+          isEnglish ? 'Evening Azkar 🌇' : 'أذكار المساء 🌇',
+          isEnglish
             ? 'End your day with remembrance of Allah. Read your evening azkar now.'
-            : 'اختم يومك بذكر الله. اقرأ أذكار المساء الآن.');
+            : 'اختم يومك بذكر الله. اقرأ أذكار المساء الآن.',
+          'evening_azkar',
+        ),
+      AzkarType.sleeping => (
+          isEnglish ? 'Before Sleeping Azkar 🌙' : 'أذكار النوم 🌙',
+          isEnglish
+            ? 'Before you sleep, remember Allah with these beautiful adhkar for peaceful sleep.'
+            : 'قبل النوم، اذكر الله بهذه الأذكار الجميلة لنوم هادئ.',
+          'sleeping_azkar',
+        ),
+    };
 
     final androidDetails = AndroidNotificationDetails(
       azkarChannelId,
       'Azkar Reminders',
-      channelDescription: 'Channel for morning and evening azkar reminders',
+      channelDescription: 'Channel for azkar reminders',
       importance: Importance.high,
       priority: Priority.high,
       playSound: false,
@@ -399,39 +430,50 @@ final initSettings = InitializationSettings(
       androidAllowWhileIdle: true,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: isMorning ? 'morning_azkar' : 'evening_azkar',
+      payload: payload,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
 
   Future<void> showRichAzkarNotification({
-    required bool isMorning,
+    required AzkarType type,
     String? customTitle,
     String? customBody,
     String? customPayload,
   }) async {
-    final bool isEnglish = Globals.languageState ?? true;
+    final isEnglish = Globals.languageState ?? true;
 
-    final title = customTitle ?? 
-        (isMorning 
-            ? (isEnglish ? 'Morning Azkar 🌅' : 'أذكار الصباح 🌅')
-            : (isEnglish ? 'Evening Azkar 🌇' : 'أذكار المساء 🌇'));
-
-    final body = customBody ??
-        (isMorning
-            ? (isEnglish 
-                ? 'Start your day with remembrance of Allah. Read your morning azkar now.'
-                : 'ابدأ يومك بذكر الله. اقرأ أذكار الصباح الآن.')
-            : (isEnglish
-                ? 'End your day with remembrance of Allah. Read your evening azkar now.'
-                : 'اختم يومك بذكر الله. اقرأ أذكار المساء الآن.'));
-
-    final payload = customPayload ?? (isMorning ? 'morning_azkar' : 'evening_azkar');
+    final (title, body, payload, notificationId) = switch (type) {
+      AzkarType.morning => (
+          customTitle ?? (isEnglish ? 'Morning Azkar 🌅' : 'أذكار الصباح 🌅'),
+          customBody ?? (isEnglish 
+            ? 'Start your day with remembrance of Allah. Read your morning azkar now.'
+            : 'ابدأ يومك بذكر الله. اقرأ أذكار الصباح الآن.'),
+          customPayload ?? 'morning_azkar',
+          morningAzkarId,
+        ),
+      AzkarType.evening => (
+          customTitle ?? (isEnglish ? 'Evening Azkar 🌇' : 'أذكار المساء 🌇'),
+          customBody ?? (isEnglish
+            ? 'End your day with remembrance of Allah. Read your evening azkar now.'
+            : 'اختم يومك بذكر الله. اقرأ أذكار المساء الآن.'),
+          customPayload ?? 'evening_azkar',
+          eveningAzkarId,
+        ),
+      AzkarType.sleeping => (
+          customTitle ?? (isEnglish ? 'Before Sleeping Azkar 🌙' : 'أذكار النوم 🌙'),
+          customBody ?? (isEnglish
+            ? 'Before you sleep, remember Allah with these beautiful adhkar for peaceful sleep.'
+            : 'قبل النوم، اذكر الله بهذه الأذكار الجميلة لنوم هادئ.'),
+          customPayload ?? 'sleeping_azkar',
+          sleepingAzkarId,
+        ),
+    };
 
     final androidDetails = AndroidNotificationDetails(
       azkarChannelId,
       'Azkar Reminders',
-      channelDescription: 'Channel for morning and evening azkar reminders',
+      channelDescription: 'Channel for azkar reminders',
       importance: Importance.high,
       priority: Priority.high,
       playSound: false,
@@ -467,7 +509,7 @@ final initSettings = InitializationSettings(
     );
 
     await _notificationsPlugin.show(
-      isMorning ? morningAzkarId : eveningAzkarId,
+      notificationId,
       title,
       body,
       NotificationDetails(android: androidDetails, iOS: iosDetails),
@@ -486,10 +528,11 @@ final initSettings = InitializationSettings(
   Future<void> cancelAzkarReminders() async {
     await _notificationsPlugin.cancel(morningAzkarId);
     await _notificationsPlugin.cancel(eveningAzkarId);
+    await _notificationsPlugin.cancel(sleepingAzkarId);
   }
 
   Future<void> scheduleBackgroundTask(tz.TZDateTime time) async {
-    final bool isEnglish = Globals.languageState ?? true;
+    final isEnglish = Globals.languageState ?? true;
 
     const androidDetails = AndroidNotificationDetails(
       scheduleChannelId,

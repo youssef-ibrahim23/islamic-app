@@ -32,14 +32,10 @@ class AppLaunchService {
     final isFirstRun = prefs.getBool('first_run') ?? true;
 
     if (isFirstRun) {
-      // Clear all saved preferences
       await prefs.clear();
-
-      // Set 'first_run' to false AFTER clearing
       await prefs.setBool('first_run', false);
 
       try {
-        // Delete temp cache directory
         final tempDir = await getTemporaryDirectory();
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
@@ -73,7 +69,7 @@ class AppLaunchService {
     _timezoneInitialized = true;
 
     Position? position;
-    String timezoneName = 'Africa/Cairo'; // Fallback
+    String timezoneName = 'Africa/Cairo';
 
     try {
       final permission = await Geolocator.checkPermission();
@@ -136,14 +132,13 @@ class AppLaunchService {
       );
 
       final now = DateTime.now();
-      final monthKey = "${now.year}-${now.month}"; // e.g., "2025-7"
+      final monthKey = "${now.year}-${now.month}";
 
       final prefs = await SharedPreferences.getInstance();
       final savedLat = prefs.getDouble("lat");
       final savedLon = prefs.getDouble("lon");
       final savedMonth = prefs.getString("lastScheduledMonth");
 
-      // Skip if already scheduled for this month and same location
       if (savedLat == position.latitude &&
           savedLon == position.longitude &&
           savedMonth == monthKey) {
@@ -173,9 +168,16 @@ class AppLaunchService {
         };
 
         for (final entry in prayers.entries) {
-          if (entry.value.isAfter(DateTime.now())) {
+          final prayerName = entry.key;
+          final prayerTime = entry.value;
+
+          final minutesDiff = prayerTime.difference(DateTime.now()).inMinutes;
+          if (minutesDiff > 1) {
+            print("🔔 Scheduling $prayerName on $prayerTime");
             await NotificationService()
-                .schedulePrayerNotification(entry.key, entry.value);
+                .schedulePrayerNotification(prayerName, prayerTime);
+          } else {
+            print("⏩ Skipping $prayerName on $prayerTime (too close or past)");
           }
         }
       }
@@ -200,24 +202,28 @@ class AppLaunchService {
     }
 
     try {
-      // Schedule morning azkar at sunrise (adjust time as needed)
       await NotificationService().scheduleAzkarReminder(
         id: NotificationService.morningAzkarId,
         time: const TimeOfDay(hour: 6, minute: 0),
-        isMorning: true,
+        type: AzkarType.morning,
       );
 
-      // Schedule evening azkar at sunset (adjust time as needed)
       await NotificationService().scheduleAzkarReminder(
         id: NotificationService.eveningAzkarId,
         time: const TimeOfDay(hour: 18, minute: 0),
-        isMorning: false,
+        type: AzkarType.evening,
+      );
+
+      await NotificationService().scheduleAzkarReminder(
+        id: NotificationService.sleepingAzkarId,
+        time: const TimeOfDay(hour: 23, minute: 0),
+        type: AzkarType.sleeping,
       );
 
       await prefs.setBool('azkar_scheduled', true);
-      print('✅ Morning and evening azkar reminders scheduled');
+      print('✅ Daily Azkar reminders scheduled');
     } catch (e) {
-      print('❌ Error scheduling azkar reminders: $e');
+      print('❌ Error scheduling Azkar reminders: $e');
     }
   }
 
@@ -225,23 +231,17 @@ class AppLaunchService {
     final now = tz.TZDateTime.now(tz.local);
     final nextMonth = now.month == 12 ? 1 : now.month + 1;
     final nextYear = now.month == 12 ? now.year + 1 : now.year;
+    final nextKey = "$nextYear-$nextMonth";
 
     final prefs = await SharedPreferences.getInstance();
     final lastScheduled = prefs.getString("lastMonthlyAzanUpdate");
 
-    final nextKey = "$nextYear-$nextMonth";
     if (lastScheduled == nextKey) {
       print('🔄 Monthly azan update already scheduled for $nextKey.');
       return;
     }
 
-    final nextRun = tz.TZDateTime(
-      tz.local,
-      nextYear,
-      nextMonth,
-      1,
-      4, // 4:00 AM
-    );
+    final nextRun = tz.TZDateTime(tz.local, nextYear, nextMonth, 1, 4);
 
     await NotificationService().scheduleBackgroundTask(nextRun);
     await prefs.setString("lastMonthlyAzanUpdate", nextKey);
@@ -251,17 +251,14 @@ class AppLaunchService {
 
   static Future<void> rescheduleAllNotifications() async {
     try {
-      // Cancel all existing notifications
       await NotificationService().cancelAllPrayerNotifications();
       await NotificationService().cancelAzkarReminders();
 
-      // Clear scheduling flags
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('lastScheduledMonth');
       await prefs.remove('azkar_scheduled');
       await prefs.remove('lastMonthlyAzanUpdate');
 
-      // Reschedule everything
       await scheduleAllAzans();
       await scheduleDailyAzkarReminders();
       await scheduleMonthlyAzanUpdate();
