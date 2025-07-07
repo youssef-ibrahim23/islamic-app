@@ -240,9 +240,8 @@ class NotificationService {
   }
 
   Future<void> scheduleDailyQuranReminder(
-    TimeOfDay time, {
-    String? customMessage,
-  }) async {
+    TimeOfDay time
+  ) async {
     final isEnglish = Globals.languageState ?? true;
     final now = DateTime.now();
     var scheduledTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
@@ -265,7 +264,7 @@ class NotificationService {
       color: const Color(0xFF4CAF50),
       largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       styleInformation: BigTextStyleInformation(
-        customMessage ?? (isEnglish 
+          (isEnglish 
           ? 'Take a moment to read Quran today and gain blessings' 
           : 'خذ لحظة لقراءة القرآن اليوم واكتساب البركات'),
         contentTitle: isEnglish ? 'Quran Reminder 📖' : 'تذكير القرآن 📖',
@@ -283,7 +282,7 @@ class NotificationService {
     await _notificationsPlugin.zonedSchedule(
       quranReminderId,
       isEnglish ? 'Quran Reminder 📖' : 'تذكير القرآن 📖',
-      customMessage ?? (isEnglish 
+        (isEnglish 
         ? 'Take a moment to read Quran today and gain blessings' 
         : 'خذ لحظة لقراءة القرآن اليوم واكتساب البركات'),
       tzTime,
@@ -518,8 +517,8 @@ class NotificationService {
     final delay = time.difference(now);
 
     Future.delayed(delay, () async {
-      await AppLaunchService.scheduleAllAzans();
-      await AppLaunchService.scheduleMonthlyAzanUpdate();
+      await AppLaunchService.scheduleDailyAzans();
+      await AppLaunchService.scheduleDailyAzanUpdate();
     });
   }
 
