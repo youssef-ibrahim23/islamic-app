@@ -225,7 +225,7 @@ class AppLaunchService {
       );
       await NotificationService().scheduleAzkarReminder(
         id: NotificationService.sleepingAzkarId,
-        time: const TimeOfDay(hour: 22, minute: 0),
+        time: const TimeOfDay(hour: 23, minute: 0),
         type: AzkarType.sleeping,
       );
 
