@@ -34,14 +34,17 @@ class _HomePageState extends State<HomePage> with RouteAware {
     _surahFuture = _fetchSurahData();
   }
 
-  Future<Map<String, dynamic>> _fetchSurahData() async {
-    return await HomeServices.loadLastSurahAsync();
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     Globals.routeObserver.subscribe(this, ModalRoute.of(context)! as PageRoute);
+
+    // ✅ Preload background image to prevent initial lag
+    precacheImage(const AssetImage('assets/background.jpg'), context);
+  }
+
+  Future<Map<String, dynamic>> _fetchSurahData() async {
+    return await HomeServices.loadLastSurahAsync();
   }
 
   @override
@@ -64,66 +67,67 @@ class _HomePageState extends State<HomePage> with RouteAware {
     final isEnglish = Globals.languageState ?? false;
 
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          const Image(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
             image: AssetImage('assets/background.jpg'),
             fit: BoxFit.cover,
-            gaplessPlayback: true,
+            filterQuality: FilterQuality.low, // ✅ Speed up rendering
           ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  SizedBox(height: screenHeight * 0.06),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                SizedBox(height: screenHeight * 0.06),
 
-                  const CombinedDateWidget(
-                    cardColor: cardColor,
-                    textColor: textColor,
-                  ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),
+                const CombinedDateWidget(
+                  cardColor: cardColor,
+                  textColor: textColor,
+                ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),
 
-                  SizedBox(height: screenHeight * 0.03),
+                SizedBox(height: screenHeight * 0.03),
 
-                  FutureBuilder<Map<String, dynamic>>(
-                    future: _surahFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done &&
-                          snapshot.hasData) {
-                        return DailyAyatCard(
-                          currentSora: snapshot.data!['name'],
-                          surahId: snapshot.data!['id'],
-                          accentColor: accentColor,
-                          cardColor: cardColor,
-                          textColor: textColor,
-                        ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2);
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
+                FutureBuilder<Map<String, dynamic>>(
+                  future: _surahFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.done &&
+                        snapshot.hasData) {
+                      return DailyAyatCard(
+                        currentSora: snapshot.data!['name'],
+                        surahId: snapshot.data!['id'],
+                        accentColor: accentColor,
+                        cardColor: cardColor,
+                        textColor: textColor,
+                      ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
 
-                  SizedBox(height: screenHeight * 0.03),
+                SizedBox(height: screenHeight * 0.03),
 
-                  _buildCategoryRow(isEnglish, [
-                    _buildAnimatedCategory(FontAwesomeIcons.bookQuran, isEnglish ? "Quran" : "القرآن", const QuranPage(), 700),
-                    _buildAnimatedCategory(FontAwesomeIcons.handsPraying, isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 800),
-                    _buildAnimatedCategory(FontAwesomeIcons.mosque, isEnglish ? "Prayers" : "الصلاة", const PrayerTimesPage(), 900),
-                  ]),
-                  SizedBox(height: screenHeight * 0.025),
-                  _buildCategoryRow(isEnglish, [
-                    _buildAnimatedCategory(FontAwesomeIcons.kaaba, isEnglish ? "Counter" : "التسبيح", const Counter(), 1000),
-                    _buildAnimatedCategory(FontAwesomeIcons.calendarDays, isEnglish ? "Calendar" : "التقويم", const EnhancedCalendar(), 1100),
-                    _buildAnimatedCategory(FontAwesomeIcons.bookOpen, isEnglish ? "Ahadith" : "الأحاديث", const HadithScreen(), 1200),
-                  ]),
+                _buildCategoryRow(isEnglish, [
+                  _buildAnimatedCategory(FontAwesomeIcons.bookQuran, isEnglish ? "Quran" : "القرآن", const QuranPage(), 700),
+                  _buildAnimatedCategory(FontAwesomeIcons.handsPraying, isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 800),
+                  _buildAnimatedCategory(FontAwesomeIcons.mosque, isEnglish ? "Prayers" : "الصلاة", const PrayerTimesPage(), 900),
+                ]),
+                SizedBox(height: screenHeight * 0.025),
+                _buildCategoryRow(isEnglish, [
+                  _buildAnimatedCategory(FontAwesomeIcons.kaaba, isEnglish ? "Counter" : "التسبيح", const Counter(), 1000),
+                  _buildAnimatedCategory(FontAwesomeIcons.calendarDays, isEnglish ? "Calendar" : "التقويم", const EnhancedCalendar(), 1100),
+                  _buildAnimatedCategory(FontAwesomeIcons.bookOpen, isEnglish ? "Ahadith" : "الأحاديث", const HadithScreen(), 1200),
+                ]),
 
-                  SizedBox(height: screenHeight * 0.04),
-                ],
-              ),
+                SizedBox(height: screenHeight * 0.04),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

@@ -14,11 +14,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _imagePrecached = false;
+
   @override
   void initState() {
     super.initState();
     _loadLanguageState();
-    _startNavigationAfterDelay();
+    _precacheAssetsAndNavigate();
   }
 
   Future<void> _loadLanguageState() async {
@@ -26,25 +28,37 @@ class _SplashScreenState extends State<SplashScreen> {
     Globals.languageState = sharedPreferences.getBool("language") ?? false;
   }
 
-  void _startNavigationAfterDelay() {
-    Timer(const Duration(seconds: 3), () async {
+  Future<void> _precacheAssetsAndNavigate() async {
+    // ✅ Ensure widget tree is ready for precaching
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await precacheImage(const AssetImage('assets/background.jpg'), context);
+      _imagePrecached = true;
+
+      // Wait for the rest of splash duration (if needed)
+      await Future.delayed(const Duration(seconds: 2));
+
       _navigateToHome();
     });
   }
 
   void _navigateToHome() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const BottomBar()),
-    );
+    if (_imagePrecached) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const BottomBar()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: Image.asset("assets/ic_launcher.jpg", fit: BoxFit.cover),
+        child: Image(
+          image: AssetImage("assets/ic_launcher.jpg"),
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
