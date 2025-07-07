@@ -5,16 +5,15 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzData;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:adhan/adhan.dart';
 
-import 'package:islamic_app/services/exact_alarm_permission.dart';
 import 'package:islamic_app/services/notification_services.dart';
 import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
-  static bool _timezoneInitialized = false;
+   static bool _timezoneInitialized = false;
 
   static const Map<String, String> _tzMap = {
     'EG': 'Africa/Cairo',
@@ -29,81 +28,75 @@ class AppLaunchService {
     'IQ': 'Asia/Baghdad',
   };
 
-  /// Initialize all app services on first launch
   static Future<void> initializeApp() async {
-    Globals.languageState = false;
+    try {
+      Globals.languageState = false;
 
-    await _handleFirstRun();
-    await _requestPermissions();
-    await _handleExactAlarmPermission();
-    await NotificationService().init();
-    await _setupTimezoneOnce();
+      final prefs = await SharedPreferences.getInstance();
 
-    Future.microtask(() async {
-      await _scheduleStartupTasks();
-    });
+      await Future.wait([
+        _handleFirstRun(prefs),
+        NotificationService().init(),
+        _setupTimezoneOnce(prefs),
+        _loadLanguageState(prefs),
+      ]);
+
+      unawaited(_scheduleStartupTasks());
+    } catch (e) {
+      debugPrint("❌ initializeApp failed: $e");
+    }
   }
 
-  /// Handle app first run logic: clear prefs & temp files
-  static Future<void> _handleFirstRun() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isFirstRun = prefs.getBool('first_run') ?? true;
+  static Future<void> requestPermissions() async {
+    final permissions = [
+      Permission.locationWhenInUse,
+      Permission.notification,
+      Permission.scheduleExactAlarm,
+    ];
 
-    if (isFirstRun) {
-      await prefs.clear();
+    final statuses = await permissions.request();
+    for (final entry in statuses.entries) {
+      if (!entry.value.isGranted) {
+        debugPrint("⚠️ Permission denied: ${entry.key}");
+      }
+    }
+  }
+
+  static Future<void> _handleFirstRun(SharedPreferences prefs) async {
+    if (prefs.getBool('first_run') ?? true) {
       await prefs.setBool('first_run', false);
-
       try {
         final tempDir = await getTemporaryDirectory();
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
-          debugPrint("✅ Temp files cleared on first run.");
+          debugPrint("✅ Temp directory cleared.");
         }
       } catch (e) {
-        debugPrint("❌ Failed to clear temp: $e");
+        debugPrint("❌ Error clearing temp dir: $e");
       }
     }
   }
 
-  /// Request core app permissions
-  static Future<void> _requestPermissions() async {
-    final results = await [
-      Permission.locationWhenInUse,
-      Permission.notification,
-      Permission.scheduleExactAlarm,
-    ].request();
-
-    results.forEach((perm, status) {
-      if (!status.isGranted) {
-        debugPrint("⚠️ Missing permission: $perm");
-      }
-    });
+  static Future<void> _loadLanguageState(SharedPreferences prefs) async {
+    Globals.languageState = prefs.getBool("language") ?? false;
   }
 
-  /// Check & request exact alarm permission
-  static Future<void> _handleExactAlarmPermission() async {
-    if (!await ExactAlarmPermission.isExactAlarmAllowed()) {
-      await ExactAlarmPermission.requestExactAlarmPermission();
-    }
-  }
-
-  /// Set up timezone for scheduling notifications
-  static Future<void> _setupTimezoneOnce() async {
+  static Future<void> _setupTimezoneOnce(SharedPreferences prefs) async {
     if (_timezoneInitialized) return;
     _timezoneInitialized = true;
 
-    String tzName = 'Africa/Cairo'; // default fallback
-    final prefs = await SharedPreferences.getInstance();
+    String tzName = 'Africa/Cairo';
 
     try {
       if (await _checkLocationPermission()) {
         final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 5)
+          desiredAccuracy: LocationAccuracy.low,
+          timeLimit: const Duration(seconds: 5),
         );
 
-        await prefs.setDouble("lat", position.latitude);
-        await prefs.setDouble("lng", position.longitude);
+        prefs
+          ..setDouble("lat", position.latitude)
+          ..setDouble("lng", position.longitude);
 
         final placemarks = await geocoding.placemarkFromCoordinates(
           position.latitude,
@@ -116,19 +109,18 @@ class AppLaunchService {
         }
       }
     } catch (e) {
-      debugPrint("⚠️ Timezone fallback due to location error: $e");
+      debugPrint("⚠️ Fallback timezone: $tzName due to error: $e");
     }
 
     try {
-      tz.initializeTimeZones();
+      tzData.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation(tzName));
-      debugPrint('⏰ Timezone set to: $tzName');
+      debugPrint("⏰ Timezone set: $tzName");
     } catch (e) {
-      debugPrint('❌ Timezone initialization failed: $e');
+      debugPrint("❌ Failed to initialize timezone: $e");
     }
   }
 
-  /// Checks and requests location permission if needed
   static Future<bool> _checkLocationPermission() async {
     var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
@@ -139,18 +131,18 @@ class AppLaunchService {
         permission == LocationPermission.whileInUse;
   }
 
-  /// Schedule all background jobs
   static Future<void> _scheduleStartupTasks() async {
     try {
-      await scheduleAllAzans();
-      await scheduleDailyAzkarReminders();
-      await scheduleMonthlyAzanUpdate();
+      await Future.wait([
+        scheduleAllAzans(),
+        scheduleDailyAzkarReminders(),
+        scheduleMonthlyAzanUpdate(),
+      ]);
     } catch (e) {
-      debugPrint("❌ Background setup failed: $e");
+      debugPrint("❌ Startup task scheduling failed: $e");
     }
   }
 
-  /// Schedule all Azan notifications for the current month
   static Future<void> scheduleAllAzans() async {
     try {
       final now = DateTime.now();
@@ -174,6 +166,8 @@ class AppLaunchService {
         ..madhab = Madhab.shafi;
 
       final days = DateUtils.getDaysInMonth(now.year, now.month);
+      final notificationService = NotificationService();
+
       for (int day = 1; day <= days; day++) {
         final date = DateTime(now.year, now.month, day);
         final prayers = PrayerTimes(coords, DateComponents.from(date), method);
@@ -187,10 +181,11 @@ class AppLaunchService {
         };
 
         for (final entry in times.entries) {
-          final prayerTime = entry.value;
-          if (prayerTime.difference(DateTime.now()).inMinutes > 1) {
-            await NotificationService()
-                .schedulePrayerNotification(entry.key, prayerTime);
+          if (entry.value.isAfter(now)) {
+            await notificationService.schedulePrayerNotification(
+              entry.key,
+              entry.value,
+            );
           }
         }
       }
@@ -200,45 +195,47 @@ class AppLaunchService {
         ..setDouble("lon", position.longitude)
         ..setString("lastScheduledMonth", key);
 
-      debugPrint("✅ Azan schedule complete for $key");
+      debugPrint("✅ Azans scheduled for $key");
     } catch (e) {
-      debugPrint("❌ Failed to schedule azans: $e");
+      debugPrint("❌ Error scheduling Azans: $e");
     }
   }
 
-  /// Schedule daily Azkar reminders
   static Future<void> scheduleDailyAzkarReminders() async {
-    NotificationService notificationService = NotificationService();
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool('azkar_scheduled') ?? false) return;
 
     try {
-      await NotificationService().scheduleAzkarReminder(
-        id: NotificationService.morningAzkarId,
-        time: const TimeOfDay(hour: 6, minute: 0),
-        type: AzkarType.morning,
-      );
-      await NotificationService().scheduleAzkarReminder(
-        id: NotificationService.eveningAzkarId,
-        time: const TimeOfDay(hour: 18, minute: 0),
-        type: AzkarType.evening,
-      );
-      await NotificationService().scheduleAzkarReminder(
-        id: NotificationService.sleepingAzkarId,
-        time: const TimeOfDay(hour: 23, minute: 0),
-        type: AzkarType.sleeping,
-      );
+      final notificationService = NotificationService();
 
-      await notificationService.scheduleDailyQuranReminder(const TimeOfDay(hour: 15, minute: 30));
+      await Future.wait([
+        notificationService.scheduleAzkarReminder(
+          id: NotificationService.morningAzkarId,
+          time: const TimeOfDay(hour: 6, minute: 0),
+          type: AzkarType.morning,
+        ),
+        notificationService.scheduleAzkarReminder(
+          id: NotificationService.eveningAzkarId,
+          time: const TimeOfDay(hour: 18, minute: 0),
+          type: AzkarType.evening,
+        ),
+        notificationService.scheduleAzkarReminder(
+          id: NotificationService.sleepingAzkarId,
+          time: const TimeOfDay(hour: 23, minute: 0),
+          type: AzkarType.sleeping,
+        ),
+        notificationService.scheduleDailyQuranReminder(
+          const TimeOfDay(hour: 15, minute: 30),
+        ),
+      ]);
 
       await prefs.setBool('azkar_scheduled', true);
-      debugPrint('✅ Daily azkar reminders scheduled.');
+      debugPrint("✅ Daily Azkar reminders set.");
     } catch (e) {
-      debugPrint('❌ Error in azkar scheduling: $e');
+      debugPrint("❌ Failed to schedule Azkar: $e");
     }
   }
 
-  /// Schedule task to reschedule azans for next month
   static Future<void> scheduleMonthlyAzanUpdate() async {
     try {
       final now = tz.TZDateTime.now(tz.local);
@@ -253,9 +250,9 @@ class AppLaunchService {
       await NotificationService().scheduleBackgroundTask(runTime);
       await prefs.setString("lastMonthlyAzanUpdate", nextKey);
 
-      debugPrint("📅 Monthly update scheduled: $runTime");
+      debugPrint("📅 Monthly Azan update scheduled at $runTime");
     } catch (e) {
-      debugPrint("❌ Failed monthly azan update: $e");
+      debugPrint("❌ Failed to schedule monthly update: $e");
     }
   }
 }
