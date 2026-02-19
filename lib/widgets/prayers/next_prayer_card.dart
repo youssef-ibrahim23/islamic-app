@@ -27,7 +27,7 @@ class NextPrayerCard extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         image: const DecorationImage(
-          image: AssetImage("assets/prayer.jpg"),
+          image: AssetImage("assets/images/prayer.jpg"),
           fit: BoxFit.cover,
         ),
         borderRadius: BorderRadius.circular(20),
@@ -92,7 +92,8 @@ class NextPrayerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildText(String text, double fontSize, FontWeight weight, [double opacity = 1]) {
+  Widget _buildText(String text, double fontSize, FontWeight weight,
+      [double opacity = 1]) {
     return Text(
       text,
       style: GoogleFonts.getFont(

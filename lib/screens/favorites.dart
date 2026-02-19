@@ -16,7 +16,6 @@ class FavoritesPage extends StatefulWidget {
 
 class _FavoritesPageState extends State<FavoritesPage> {
   Map<int, String> favoriteSurahs = {};
-  
 
   @override
   void initState() {
@@ -62,7 +61,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
               ],
             ),
             image: const DecorationImage(
-              image: AssetImage("assets/background.jpg"),
+              image: AssetImage("assets/images/background.jpg"),
               fit: BoxFit.cover,
               opacity: 0.9,
             ),
@@ -73,7 +72,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
               children: [
                 HeaderWidget(isEnglish: isEnglish, isPortrait: isPortrait),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Column(
                     children: [
                       if (favoriteSurahs.isEmpty)

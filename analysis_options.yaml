@@ -10,6 +10,7 @@
 analyzer:
   errors:
     depend_on_referenced_packages: ignore ignore ignore ignore ignore ignore
+    file_names: ignore
     override_on_non_overriding_member: ignore
     unused_field: ignore
     unused_local_variable: ignore

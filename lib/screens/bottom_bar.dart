@@ -16,7 +16,7 @@ class _BottomBarState extends State<BottomBar> {
   int _currentIndex = 1; // Default to HomePage
   final Color primaryColor = const Color(0xFF8B0000); // Dark red
   final Color inactiveColor = const Color(0xFF888888); // Gray for inactive items
-  final Color backgroundColor = Colors.white;
+  final Color backgroundColor = const Color(0xffF8F5EF);
 
   final List<Widget> _pages = [
     const More(),
@@ -56,7 +56,7 @@ class _BottomBarState extends State<BottomBar> {
           ],
         ),
         child: BottomAppBar(
-          color: backgroundColor,
+          color: const Color(0xFFF8F5EF),
           elevation: 2,
           height: bottomBarHeight,
           padding: EdgeInsets.symmetric(

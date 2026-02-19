@@ -73,7 +73,7 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
         child: Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage("assets/background.jpg"),
+              image: AssetImage("assets/images/background.jpg"),
               fit: BoxFit.cover,
             ),
           ),
@@ -113,7 +113,8 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
             indicatorColor: highlightColor,
             indicatorWeight: 3,
             padding: EdgeInsets.zero,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            labelPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             tabAlignment: TabAlignment.start,
             tabs: _buildTabs(),
           ),

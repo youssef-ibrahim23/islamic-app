@@ -9,6 +9,8 @@ import 'package:islamic_app/widgets/app_them.dart';
 import 'package:islamic_app/widgets/prayers/next_prayer_card.dart';
 import 'package:islamic_app/widgets/prayers/prayer_times_list.dart';
 
+import 'location_selection_page.dart';
+
 class PrayerTimesPage extends StatefulWidget {
   const PrayerTimesPage({super.key});
 
@@ -25,9 +27,10 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
     _initializePage();
   }
 
-  void _initializePage() {
-    PrayerTimesService.checkLocationAndNavigate(context, _updateState);
-    _localTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateState());
+  void _initializePage() async {
+    await PrayerTimesService.checkLocationAndNavigate(context, _updateState);
+    _localTimer =
+        Timer.periodic(const Duration(seconds: 1), (_) => _updateState());
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle.light.copyWith(statusBarColor: primaryColor),
     );
@@ -35,6 +38,20 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
 
   void _updateState() {
     if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    setState(() {});
+  }
+
+  @override
+  void didPopNext() {
+    // Reload prayer times when returning to this page
+    // This handles the case when user returns from location selection
+    PrayerTimesService.checkLocationAndNavigate(context, _updateState);
+    setState(() {});
   }
 
   @override
@@ -88,10 +105,16 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           IconButton(
             icon: const Icon(Icons.location_on, color: Colors.white),
             tooltip: isEnglish ? 'Change Location' : 'تغيير الموقع',
-            onPressed: () {
-              PrayerTimesService.changeLocation(context, () {
-                if (mounted) setState(() {});
-              });
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const LocationSelectionPage()),
+              );
+              if (result == true) {
+                await PrayerTimesService.changeLocation(context);
+                Navigator.pop(context);
+              }
             },
           ),
         ],
@@ -101,7 +124,7 @@ class _PrayerTimesPageState extends State<PrayerTimesPage> {
           : Container(
               decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage("assets/background.jpg"),
+                  image: AssetImage("assets/images/background.jpg"),
                   fit: BoxFit.cover,
                 ),
               ),

@@ -45,7 +45,8 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
         shadowColor: Colors.black.withOpacity(0.2),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          icon:
+              const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -63,7 +64,7 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
         decoration: const BoxDecoration(
           color: Color(0xFFF8F5EF),
           image: DecorationImage(
-            image: AssetImage('assets/background.jpg'),
+            image: AssetImage('assets/images/background.jpg'),
             fit: BoxFit.cover,
             opacity: 0.9,
           ),
@@ -111,10 +112,13 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
             });
           },
           headerStyle: HeaderStyle(
-            leftChevronIcon: const Icon(Icons.chevron_left, color: primaryColor, size: 28),
-            rightChevronIcon: const Icon(Icons.chevron_right, color: primaryColor, size: 28),
+            leftChevronIcon:
+                const Icon(Icons.chevron_left, color: primaryColor, size: 28),
+            rightChevronIcon:
+                const Icon(Icons.chevron_right, color: primaryColor, size: 28),
             titleCentered: true,
-            titleTextFormatter: (date, locale) => formatCalendarHeaderText(date, isEnglish),
+            titleTextFormatter: (date, locale) =>
+                formatCalendarHeaderText(date, isEnglish),
             formatButtonVisible: false,
             titleTextStyle: TextStyle(
               color: primaryColor,
@@ -192,14 +196,15 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
                 ),
               );
             },
-            defaultBuilder: (context, day, focusedDay) =>
-                buildDefaultDay(context, day, isEnglish, textColor, hijriTextColor),
+            defaultBuilder: (context, day, focusedDay) => buildDefaultDay(
+                context, day, isEnglish, textColor, hijriTextColor),
             todayBuilder: (context, day, focusedDay) =>
                 buildTodayDay(context, day, isEnglish, primaryColor, cellSize),
             selectedBuilder: (context, day, focusedDay) =>
                 buildSelectedDay(context, day, isEnglish, cellSize),
             outsideBuilder: (context, day, focusedDay) => // Add this builder
-                buildOutsideDay(context, day, isEnglish, textColor, hijriTextColor),
+                buildOutsideDay(
+                    context, day, isEnglish, textColor, hijriTextColor),
           ),
         ),
       ),

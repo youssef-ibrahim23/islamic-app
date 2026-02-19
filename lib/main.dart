@@ -7,10 +7,8 @@ import 'package:islamic_app/services/app_lunch_services.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Only request permissions here
   await AppLaunchService.requestPermissions();
 
-  // App logic runs later in SplashScreen
   runApp(const MyApp());
 }
 

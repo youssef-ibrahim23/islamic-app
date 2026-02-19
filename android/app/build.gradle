@@ -1,27 +1,51 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // Flutter plugin must come last
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.example.islamic_app"
+    namespace = "com.developer.islamic_app"
     compileSdk = 35
     ndkVersion "27.0.12077973"
 
-    lintOptions {
-        checkReleaseBuilds false
-        abortOnError false
+    defaultConfig {
+        applicationId "com.developer.islamic_app"
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion 35
+        versionCode flutter.versionCode
+        versionName flutter.versionName
+        multiDexEnabled true
     }
 
-    defaultConfig {
-        applicationId "com.example.islamic_app"
-        minSdkVersion 21
-        targetSdkVersion 35
-        versionCode 1
-        versionName "1.0.0"
-        multiDexEnabled true
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file("${keystoreProperties['storeFile']}")
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            shrinkResources true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
     }
 
     compileOptions {
@@ -33,15 +57,6 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-
-    buildTypes {
-        release {
-            signingConfig signingConfigs.debug // Use proper key in production
-            shrinkResources false
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
 }
 
 flutter {
@@ -52,5 +67,3 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.0"
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }
-
-

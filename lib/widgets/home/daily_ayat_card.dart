@@ -68,7 +68,7 @@ class DailyAyatCard extends StatelessWidget {
               top: 10,
               right: 10,
               child: Opacity(
-                opacity: 0.1,
+                opacity: 0.15,
                 child: Icon(
                   Icons.mosque,
                   size: 120,
@@ -137,25 +137,7 @@ class DailyAyatCard extends StatelessWidget {
                                 ],
                         ),
                       ),
-                      if (verseNumber != null)
-                        Container(
-                          margin: const EdgeInsets.only(left: 12),
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            color: secondaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              verseNumber.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
+
                     ],
                   ),
                 ),
@@ -201,7 +183,6 @@ class DailyAyatCard extends StatelessWidget {
                   ),
 
                 const SizedBox(height: 16),
-
                 Align(
                   alignment:
                       isArabic ? Alignment.centerRight : Alignment.centerLeft,

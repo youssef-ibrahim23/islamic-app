@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:islamic_app/screens/prayer_times.dart';
 import 'package:islamic_app/services/location_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 import 'package:islamic_app/globals.dart';
@@ -21,7 +20,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final bool isEnglish = Globals.languageState!;
-    final TextDirection textDirection = isEnglish ? TextDirection.ltr : TextDirection.rtl;
+    final TextDirection textDirection =
+        isEnglish ? TextDirection.ltr : TextDirection.rtl;
 
     return Directionality(
       textDirection: textDirection,
@@ -47,7 +47,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         body: Container(
           decoration: BoxDecoration(
             image: const DecorationImage(
-              image: AssetImage('assets/background.jpg'),
+              image: AssetImage('assets/images/background.jpg'),
               fit: BoxFit.cover,
             ),
             gradient: LinearGradient(
@@ -69,7 +69,8 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
                   child: Column(
                     children: [
-                      const Icon(Icons.location_on, size: 60, color: primaryColor),
+                      const Icon(Icons.location_on,
+                          size: 60, color: primaryColor),
                       const SizedBox(height: 16),
                       Text(
                         isEnglish
@@ -133,31 +134,25 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                       elevation: 4,
                       shadowColor: primaryColor.withOpacity(0.3),
                     ),
-                    onPressed: _canContinue()
-                        ? () async {
-                            setState(() => isLoading = true);
+                    onPressed: () async {
+                      setState(() => isLoading = true);
+                      try {
+                        await LocationService.saveLocation(
+                          country: Globals.selectedCountry!,
+                          governorate: Globals.selectedGovernorate!,
+                        );
 
-                            try {
-                              await LocationService.saveLocation(
-                                country: Globals.selectedCountry!,
-                                governorate: Globals.selectedGovernorate!,
-                              );
+                        if (!mounted) return;
 
-                              if (!mounted) return;
-
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const PrayerTimesPage(),
-                                ),
-                              );
-                            } finally {
-                              if (mounted) {
-                                setState(() => isLoading = false);
-                              }
-                            }
-                          }
-                        : null,
+                        // Return true to indicate location was saved successfully
+                        Navigator.pop(context, true);
+                        setState(() {});
+                      } finally {
+                        if (mounted) {
+                          setState(() => isLoading = false);
+                        }
+                      }
+                    },
                     child: isLoading
                         ? const SizedBox(
                             width: 24,
@@ -168,7 +163,7 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
                             ),
                           )
                         : Text(
-                            isEnglish ? 'Continue to Prayer Times' : 'المتابعة لمواقيت الصلاة',
+                            isEnglish ? 'Change Location' : 'تغيير الموقع',
                             style: GoogleFonts.getFont(
                               'Scheherazade New',
                               fontSize: 18,
@@ -183,9 +178,5 @@ class _LocationSelectionPageState extends State<LocationSelectionPage> {
         ),
       ),
     );
-  }
-
-  bool _canContinue() {
-    return Globals.selectedCountry != null && Globals.selectedGovernorate != null;
   }
 }

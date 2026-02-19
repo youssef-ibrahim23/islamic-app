@@ -8,16 +8,17 @@ class SurahsListServices {
   /// Load Quran chapters from local JSON asset
   static Future<QuranChapters> loadLocalChapters() async {
     try {
-      final String jsonString = await rootBundle.loadString('assets/Quran.JSON');
+      final String jsonString =
+          await rootBundle.loadString('assets/data/Quran.JSON');
       final Map<String, dynamic> jsonMap = json.decode(jsonString);
       return QuranChapters.fromJson(jsonMap);
     } catch (e, stackTrace) {
       print("❌ Error loading Quran chapters: $e");
       print("📍 StackTrace: $stackTrace");
-      throw const QuranDataException("Failed to load Quran chapters from assets.");
+      throw const QuranDataException(
+          "Failed to load Quran chapters from assets.");
     }
   }
-
 }
 
 /// Custom exception for Quran data loading issues

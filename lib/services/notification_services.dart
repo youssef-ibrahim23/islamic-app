@@ -38,39 +38,50 @@ class NotificationService {
   static const int sleepingAzkarId = 999995;
 
   Future<void> init() async {
-  SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
 
-  bool isInitialized = sharedPreferences.getBool("isInitialized") ?? false;
-  if (isInitialized) return;
+    bool isInitialized = sharedPreferences.getBool("isInitialized") ?? false;
+    if (isInitialized) {
+      print(
+          "[NotificationService] init() skipped: already initialized (isInitialized=true)");
+      return;
+    }
 
-  tzData.initializeTimeZones();
+    print("[NotificationService] init() starting...");
 
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosInit = DarwinInitializationSettings(
-    requestSoundPermission: true,
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-  );
+    tzData.initializeTimeZones();
 
-  const initSettings = InitializationSettings(
-    android: androidInit,
-    iOS: iosInit,
-  );
+    print(
+        "[NotificationService] Timezones initialized. tz.local=${tz.local.name}");
 
-  await _notificationsPlugin.initialize(
-    initSettings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) {
-      _handleNotificationResponse(response);
-    },
-  );
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings(
+      requestSoundPermission: true,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+    );
 
-  await _requestPermissions();
-  await _createNotificationChannels();
+    const initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: iosInit,
+    );
 
-  await sharedPreferences.setBool("isInitialized", true);
+    await _notificationsPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        _handleNotificationResponse(response);
+      },
+    );
 
-  print("Notification system initialized.");
-}
+    print("[NotificationService] Plugin initialized.");
+
+    await _requestPermissions();
+    await _createNotificationChannels();
+
+    await sharedPreferences.setBool("isInitialized", true);
+
+    print("Notification system initialized.");
+  }
 
   void _handleNotificationResponse(NotificationResponse response) {
     final payload = response.payload ?? '';
@@ -94,16 +105,22 @@ class NotificationService {
         MaterialPageRoute(builder: (_) => const AzkarPage()),
       );
     }
-  
   }
 
   Future<void> _requestPermissions() async {
+    print("[NotificationService] Requesting notification permissions...");
     final status = await Permission.notification.status;
     if (!status.isGranted) {
+      print(
+          "[NotificationService] Permission.notification not granted yet. Requesting...");
       await Permission.notification.request();
+    } else {
+      print("[NotificationService] Permission.notification already granted.");
     }
 
     if (Platform.isIOS) {
+      print(
+          "[NotificationService] iOS detected. Requesting iOS notification permissions...");
       await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
@@ -112,6 +129,7 @@ class NotificationService {
   }
 
   Future<void> _createNotificationChannels() async {
+    print("[NotificationService] Creating Android notification channels...");
     const channels = [
       AndroidNotificationChannel(
         _prayerChannelId,
@@ -156,14 +174,24 @@ class NotificationService {
 
     if (androidPlugin != null) {
       for (final channel in channels) {
+        print(
+            "[NotificationService] Creating channel id='${channel.id}', name='${channel.name}', importance=${channel.importance}");
         await androidPlugin.createNotificationChannel(channel);
       }
+      print(
+          "[NotificationService] Android notification channels created: ${channels.length}");
+    } else {
+      print(
+          "[NotificationService] AndroidFlutterLocalNotificationsPlugin is null. Channels not created (non-Android platform?)");
     }
   }
 
   Future<void> showPrayerNotification(String title,
       {String? customBody}) async {
     final isEnglish = Globals.languageState ?? true;
+
+    print(
+        "[NotificationService] Showing prayer notification now: id=${title.hashCode}, title='$title', payload='prayer_$title'");
 
     final androidDetails = AndroidNotificationDetails(
       _prayerChannelId,
@@ -204,60 +232,73 @@ class NotificationService {
       NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: 'prayer_$title',
     );
+
+    print(
+        "[NotificationService] Prayer notification shown successfully: id=${title.hashCode}");
   }
 
   Future<void> schedulePrayerNotification(
-  String title,
-  DateTime dateTime, {
-  String? customBody,
-}) async {
-  final isEnglish = Globals.languageState ?? true;
-  final tzTime = tz.TZDateTime.from(dateTime, tz.local);
+    String title,
+    DateTime dateTime, {
+    String? customBody,
+  }) async {
+    final isEnglish = Globals.languageState ?? true;
+    final tzTime = tz.TZDateTime.from(dateTime, tz.local);
 
-  if (tzTime.isBefore(tz.TZDateTime.now(tz.local))) return;
+    final nowTz = tz.TZDateTime.now(tz.local);
+    if (tzTime.isBefore(nowTz)) {
+      print(
+          "[NotificationService] schedulePrayerNotification() skipped: '$title' tzTime=$tzTime is before now=$nowTz");
+      return;
+    }
 
-  final id = generatePrayerNotificationId(dateTime, title);
+    final id = generatePrayerNotificationId(dateTime, title);
 
-  final androidDetails = AndroidNotificationDetails(
-    _prayerChannelId,
-    'Prayer Notifications',
-    channelDescription: 'Channel for prayer time alerts',
-    importance: Importance.max,
-    priority: Priority.high,
-    playSound: false,
-    sound: null,
-    autoCancel: true,
-    color: const Color(0xFF0D47A1),
-    largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-    styleInformation: BigTextStyleInformation(
+    print(
+        "[NotificationService] Scheduling prayer notification: id=$id, title='$title', tzTime=$tzTime, payload='prayer_$title'");
+
+    final androidDetails = AndroidNotificationDetails(
+      _prayerChannelId,
+      'Prayer Notifications',
+      channelDescription: 'Channel for prayer time alerts',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: false,
+      sound: null,
+      autoCancel: true,
+      color: const Color(0xFF0D47A1),
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      styleInformation: BigTextStyleInformation(
+        customBody ?? (isEnglish ? '$title prayer time' : 'موعد صلاة $title'),
+        contentTitle: isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
+        htmlFormatBigText: true,
+        summaryText: isEnglish ? 'Tap to open app' : 'انقر لفتح التطبيق',
+      ),
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentSound: false,
+      sound: null,
+      categoryIdentifier: 'prayer_category',
+      threadIdentifier: 'prayer_notifications',
+    );
+
+    await _notificationsPlugin.zonedSchedule(
+      id,
+      isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
       customBody ?? (isEnglish ? '$title prayer time' : 'موعد صلاة $title'),
-      contentTitle: isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
-      htmlFormatBigText: true,
-      summaryText: isEnglish ? 'Tap to open app' : 'انقر لفتح التطبيق',
-    ),
-  );
+      tzTime,
+      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      androidAllowWhileIdle: true,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: 'prayer_$title',
+      matchDateTimeComponents: DateTimeComponents.dateAndTime,
+    );
 
-  const iosDetails = DarwinNotificationDetails(
-    presentSound: false,
-    sound: null,
-    categoryIdentifier: 'prayer_category',
-    threadIdentifier: 'prayer_notifications',
-  );
-
-  await _notificationsPlugin.zonedSchedule(
-    id,
-    isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
-    customBody ?? (isEnglish ? '$title prayer time' : 'موعد صلاة $title'),
-    tzTime,
-    NotificationDetails(android: androidDetails, iOS: iosDetails),
-    androidAllowWhileIdle: true,
-    uiLocalNotificationDateInterpretation:
-        UILocalNotificationDateInterpretation.absoluteTime,
-    payload: 'prayer_$title',
-    matchDateTimeComponents: DateTimeComponents.dateAndTime,
-  );
-}
-
+    print(
+        "[NotificationService] Prayer notification scheduled successfully: id=$id");
+  }
 
   Future<void> scheduleDailyQuranReminder(TimeOfDay time) async {
     final isEnglish = Globals.languageState ?? true;
@@ -270,6 +311,9 @@ class NotificationService {
     }
 
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
+    print(
+        "[NotificationService] Scheduling daily Quran reminder: id=$quranReminderId, time=${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}, tzTime=$tzTime, payload='quran_reminder'");
 
     final androidDetails = AndroidNotificationDetails(
       quranChannelId,
@@ -312,9 +356,13 @@ class NotificationService {
       payload: 'quran_reminder',
       matchDateTimeComponents: DateTimeComponents.time,
     );
+
+    print(
+        "[NotificationService] Daily Quran reminder scheduled successfully: id=$quranReminderId");
   }
 
   Future<void> scheduleDailyAzkarReminders() async {
+    print("[NotificationService] Scheduling daily Azkar reminders...");
     // Morning azkar at sunrise
     await scheduleAzkarReminder(
       id: morningAzkarId,
@@ -335,6 +383,8 @@ class NotificationService {
       time: const TimeOfDay(hour: 22, minute: 0),
       type: AzkarType.sleeping,
     );
+
+    print("[NotificationService] Daily Azkar reminders scheduling finished.");
   }
 
   Future<void> scheduleAzkarReminder({
@@ -377,6 +427,9 @@ class NotificationService {
         ),
     };
 
+    print(
+        "[NotificationService] Scheduling Azkar reminder: id=$id, type=$type, title='$title', tzTime=$tzTime, payload='$payload'");
+
     final androidDetails = AndroidNotificationDetails(
       azkarChannelId,
       'Azkar Reminders',
@@ -415,6 +468,9 @@ class NotificationService {
       payload: payload,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+
+    print(
+        "[NotificationService] Azkar reminder scheduled successfully: id=$id");
   }
 
   Future<void> showRichAzkarNotification({
@@ -489,6 +545,9 @@ class NotificationService {
       NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
+
+    print(
+        "[NotificationService] Rich Azkar notification shown: id=$notificationId, type=$type, payload='$payload'");
   }
 
   Future<void> cancelAllPrayerNotifications() async {
@@ -507,6 +566,9 @@ class NotificationService {
 
   Future<void> scheduleBackgroundTask(tz.TZDateTime time) async {
     final isEnglish = Globals.languageState ?? true;
+
+    print(
+        "[NotificationService] Scheduling background task notification: id=$backgroundTaskId, tzTime=$time, payload='update_prayer'");
 
     const androidDetails = AndroidNotificationDetails(
       scheduleChannelId,
@@ -540,9 +602,16 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
     final delay = time.difference(now);
 
+    print(
+        "[NotificationService] Background task notification scheduled. now=$now, will trigger in ${delay.inSeconds}s");
+
     Future.delayed(delay, () async {
+      print(
+          "[NotificationService] Background task triggered. Calling AppLaunchService scheduling...");
       await AppLaunchService.scheduleAllAzans();
       await AppLaunchService.scheduleMonthlyAzanUpdate();
+      print(
+          "[NotificationService] AppLaunchService scheduling finished (scheduleAllAzans + scheduleMonthlyAzanUpdate)");
     });
   }
 
@@ -555,6 +624,8 @@ class NotificationService {
     String? payload,
     Color? color,
   }) async {
+    print(
+        "[NotificationService] Showing custom notification now: id=${title.hashCode}, title='$title', channelId='${channelId ?? _prayerChannelId}', payload='${payload ?? ''}'");
     final androidDetails = AndroidNotificationDetails(
       channelId ?? _prayerChannelId,
       channelName ?? 'Prayer Notifications',
@@ -587,21 +658,23 @@ class NotificationService {
       NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
+
+    print(
+        "[NotificationService] Custom notification shown successfully: id=${title.hashCode}");
   }
 
   /// 🔢 Generate unique notification ID per prayer & date (e.g., 20250707 + 1 = 202507071)
-int generatePrayerNotificationId(DateTime date, String prayerName) {
-  final prayerMap = {
-    "الفجر": 1,
-    "الظهر": 2,
-    "العصر": 3,
-    "المغرب": 4,
-    "العشاء": 5,
-  };
+  int generatePrayerNotificationId(DateTime date, String prayerName) {
+    final prayerMap = {
+      "الفجر": 1,
+      "الظهر": 2,
+      "العصر": 3,
+      "المغرب": 4,
+      "العشاء": 5,
+    };
 
-  final base = int.parse(
-      '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}');
-  return base * 10 + (prayerMap[prayerName] ?? 0);
-}
-
+    final base = int.parse(
+        '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}');
+    return base * 10 + (prayerMap[prayerName] ?? 0);
+  }
 }

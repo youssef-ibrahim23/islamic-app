@@ -86,14 +86,14 @@ class _CounterState extends State<Counter> {
               child: Container(
                 decoration: const BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage('assets/background.jpg'),
+                    image: AssetImage('assets/images/background.jpg'),
                     fit: BoxFit.cover,
                     opacity: 0.9,
                   ),
                 ),
                 child: Center(
                   child: GestureDetector(
-  onTap: _incrementCounter,
+                    onTap: _incrementCounter,
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 600),
                       child: Column(
@@ -101,8 +101,12 @@ class _CounterState extends State<Counter> {
                         children: [
                           // Counter display
                           Container(
-                            width: isPortrait ? size.width * 0.6 : size.height * 0.6,
-                            height: isPortrait ? size.width * 0.6 : size.height * 0.6,
+                            width: isPortrait
+                                ? size.width * 0.6
+                                : size.height * 0.6,
+                            height: isPortrait
+                                ? size.width * 0.6
+                                : size.height * 0.6,
                             decoration: BoxDecoration(
                               color: cardColor,
                               shape: BoxShape.circle,
@@ -119,47 +123,65 @@ class _CounterState extends State<Counter> {
                               child: Text(
                                 Globals.languageState!
                                     ? '$_counter'
-                                    : Globals.toArabicNumber(_counter.toString()),
+                                    : Globals.toArabicNumber(
+                                        _counter.toString()),
                                 style: TextStyle(
                                   fontSize: isPortrait
                                       ? size.width * 0.2
                                       : size.height * 0.2,
                                   fontWeight: FontWeight.bold,
                                   color: primaryColor,
-                                  fontFamily: Globals.languageState! ? 'Roboto' : 'Tajawal',
+                                  fontFamily: Globals.languageState!
+                                      ? 'Roboto'
+                                      : 'Tajawal',
                                 ),
                               ),
-                    
                             ),
                           ).animate().fadeIn(duration: 500.ms).scale(),
-                    
-                          SizedBox(height: isPortrait ? size.height * 0.05 : size.width * 0.05),
-                    
+
+                          SizedBox(
+                              height: isPortrait
+                                  ? size.height * 0.05
+                                  : size.width * 0.05),
+
                           // Increment button
                           CounterButton(
                             isPressed: _isPressed,
                             onTap: _incrementCounter,
-                            size: isPortrait ? size.width * 0.5 : size.height * 0.5,
+                            size: isPortrait
+                                ? size.width * 0.5
+                                : size.height * 0.5,
                             color: primaryColor,
                           ),
-                    
-                          SizedBox(height: isPortrait ? size.height * 0.03 : size.width * 0.03),
-                    
+
+                          SizedBox(
+                              height: isPortrait
+                                  ? size.height * 0.03
+                                  : size.width * 0.03),
+
                           // Reset button
                           TextButton(
                             onPressed: _resetCounter,
                             style: TextButton.styleFrom(
                               foregroundColor: secondaryTextColor,
                               padding: EdgeInsets.symmetric(
-                                horizontal: isPortrait ? size.width * 0.1 : size.height * 0.1,
-                                vertical: isPortrait ? size.height * 0.02 : size.width * 0.02,
+                                horizontal: isPortrait
+                                    ? size.width * 0.1
+                                    : size.height * 0.1,
+                                vertical: isPortrait
+                                    ? size.height * 0.02
+                                    : size.width * 0.02,
                               ),
                             ),
                             child: Text(
                               Globals.languageState! ? 'Reset' : 'اعادة',
                               style: TextStyle(
-                                fontSize: isPortrait ? size.width * 0.045 : size.height * 0.045,
-                                fontFamily: Globals.languageState! ? 'Roboto' : 'Tajawal',
+                                fontSize: isPortrait
+                                    ? size.width * 0.045
+                                    : size.height * 0.045,
+                                fontFamily: Globals.languageState!
+                                    ? 'Roboto'
+                                    : 'Tajawal',
                               ),
                             ),
                           ),

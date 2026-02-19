@@ -21,17 +21,20 @@ class SurahDetailPage extends StatefulWidget {
   final String surahName;
   final String arabicName;
 
-  const SurahDetailPage(this.surahName, this.surahId, this.arabicName, {super.key});
+  const SurahDetailPage(this.surahName, this.surahId, this.arabicName,
+      {super.key});
 
   @override
   State<SurahDetailPage> createState() => _SurahDetailPageState();
 }
 
-class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingObserver {
+class _SurahDetailPageState extends State<SurahDetailPage>
+    with WidgetsBindingObserver {
   final Color _primaryColor = const Color(0xFF8B0000);
   final Color _textColor = const Color(0xFF333333);
   final Color _cardColor = Colors.white;
-  final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController();
+  final Map<int, ScrollController> _pageScrollControllers = {};
   final AudioPlayer _audioPlayer = AudioPlayer();
   final TextEditingController _searchController = TextEditingController();
 
@@ -42,7 +45,6 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   bool isLoading = true;
   String errorMessage = '';
   PlayerState _playerState = PlayerState.stopped;
-  double _playbackSpeed = 1.0;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   bool _isPlaying = false;
@@ -53,17 +55,29 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   double _downloadProgress = 0.0;
   String? _localAudioPath;
   double _fontSize = 24.0;
-  double _lastScrollPosition = 0.0;
   int? _selectedVerse;
   bool _isSearching = false;
   String _searchQuery = '';
 
+  bool _isFabMenuOpen = false;
+
+  final int _pageSize = 10;
+  int _currentPage = 0;
+  int _savedLastPage = 0;
+  double _pendingRestoreOffset = 0.0;
+
+  ScrollController _scrollControllerForPage(int page) {
+    return _pageScrollControllers.putIfAbsent(page, () => ScrollController());
+  }
+
   bool get isEnglish => Globals.languageState ?? true;
   String get fontFamily => isEnglish ? 'Roboto' : 'Tajawal';
   String get arabicFontFamily => 'Scheherazade New';
-  
-  String get _audioBaseUrl => 'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
-  String get _downloadBaseUrl => 'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
+
+  String get _audioBaseUrl =>
+      'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
+  String get _downloadBaseUrl =>
+      'https://download.quranicaudio.com/quran/mishaari_raashid_al_3afaasee/${widget.surahId.toString().padLeft(3, '0')}.mp3';
 
   @override
   void initState() {
@@ -76,16 +90,18 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     ));
     _setupAudioListeners();
     _checkIfDownloaded();
-    _loadScrollPosition();
     _searchController.addListener(() => _onSearchChanged());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _saveScrollPosition();
+    _saveReadingPosition();
     _audioPlayer.dispose();
-    _scrollController.dispose();
+    _pageController.dispose();
+    for (final controller in _pageScrollControllers.values) {
+      controller.dispose();
+    }
     _searchController.dispose();
     Globals.isSearching = false;
     super.dispose();
@@ -94,17 +110,17 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _saveScrollPosition();
+      _saveReadingPosition();
       Globals.isSearching = false;
     } else if (state == AppLifecycleState.resumed) {
-      _loadScrollPosition();
+      _loadReadingPosition();
       Globals.isSearching = false;
     }
   }
 
   // Add WillPopCallback to handle device back button
   Future<bool> _onWillPop() async {
-    await _saveScrollPosition();
+    await _saveReadingPosition();
     return true; // Allow the back navigation
   }
 
@@ -112,23 +128,47 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     setState(() {
       _searchQuery = _searchController.text;
       _filterVerses();
+      if (_searchQuery.isEmpty) {
+        _currentPage = _savedLastPage;
+      } else {
+        _currentPage = 0;
+      }
+    });
+
+    if (_searchQuery.isEmpty) {
+      _loadScrollOffsetForPage(_currentPage).then((value) {
+        _pendingRestoreOffset = value;
+        _restoreScrollForCurrentPage();
+      });
+    } else {
+      _pendingRestoreOffset = 0.0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(_currentPage);
+        }
+      });
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(_currentPage);
+      }
     });
   }
 
   String _normalizeArabic(String input) {
-  final diacritics = RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]');
-  String normalized = input.replaceAll(diacritics, '');
+    final diacritics = RegExp(r'[\u064B-\u065F\u0670\u06D6-\u06ED]');
+    String normalized = input.replaceAll(diacritics, '');
 
-  // Unify letter variations
-  normalized = normalized.replaceAll(RegExp(r'[إأٱآ]'), 'ا');
-  normalized = normalized.replaceAll('ى', 'ي');
-  normalized = normalized.replaceAll('ؤ', 'و');
-  normalized = normalized.replaceAll('ئ', 'ي');
-  normalized = normalized.replaceAll('ـ', ''); // Tatweel
+    // Unify letter variations
+    normalized = normalized.replaceAll(RegExp(r'[إأٱآ]'), 'ا');
+    normalized = normalized.replaceAll('ى', 'ي');
+    normalized = normalized.replaceAll('ؤ', 'و');
+    normalized = normalized.replaceAll('ئ', 'ي');
+    normalized = normalized.replaceAll('ـ', ''); // Tatweel
 
-  return normalized;
-}
-
+    return normalized;
+  }
 
   void _filterVerses() {
     final query = _normalizeArabic(_searchQuery);
@@ -143,29 +183,67 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     }
   }
 
-  Future<void> _loadScrollPosition() async {
-  final prefs = await SharedPreferences.getInstance();
-  final savedPosition = prefs.getDouble('scroll_position_${widget.surahId}') ?? 0.0;
-  
-  setState(() {
-    _lastScrollPosition = savedPosition;
-  });
-  
-  // Wait for the widget to be built and verses to be loaded
-  if (verses != null && _scrollController.hasClients) {
-    _scrollController.jumpTo(savedPosition);
-  }
-}
-
-  Future<void> _saveScrollPosition() async {
-  if (_scrollController.hasClients) {
+  Future<void> _loadLastPage() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(
-      'scroll_position_${widget.surahId}', 
-      _scrollController.offset
-    );
+    final savedPage = prefs.getInt('last_page_${widget.surahId}') ?? 0;
+
+    if (!mounted) return;
+    setState(() {
+      _savedLastPage = savedPage;
+      if (_searchQuery.isEmpty) {
+        _currentPage = savedPage;
+      }
+    });
   }
-}
+
+  Future<void> _saveLastPage() async {
+    if (_searchQuery.isNotEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_page_${widget.surahId}', _currentPage);
+    _savedLastPage = _currentPage;
+  }
+
+  String _scrollOffsetKeyForPage(int page) {
+    return 'scroll_offset_${widget.surahId}_$page';
+  }
+
+  Future<double> _loadScrollOffsetForPage(int page) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_scrollOffsetKeyForPage(page)) ?? 0.0;
+  }
+
+  Future<void> _saveScrollOffsetForPage(int page) async {
+    if (_searchQuery.isNotEmpty) return;
+    final controller = _pageScrollControllers[page];
+    if (controller == null || !controller.hasClients) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_scrollOffsetKeyForPage(page), controller.offset);
+  }
+
+  Future<void> _saveReadingPosition() async {
+    if (_searchQuery.isNotEmpty) return;
+    await _saveLastPage();
+    await _saveScrollOffsetForPage(_currentPage);
+  }
+
+  Future<void> _loadReadingPosition() async {
+    await _loadLastPage();
+    _pendingRestoreOffset = await _loadScrollOffsetForPage(_currentPage);
+    _restoreScrollForCurrentPage();
+  }
+
+  void _restoreScrollForCurrentPage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final controller = _pageScrollControllers[_currentPage];
+      if (controller == null || !controller.hasClients) return;
+
+      final max = controller.position.maxScrollExtent;
+      final target = _pendingRestoreOffset.clamp(0.0, max);
+      controller.jumpTo(target);
+    });
+  }
 
   void _setupAudioListeners() {
     _audioPlayer.onPlayerStateChanged.listen((state) {
@@ -178,15 +256,15 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
         });
       }
     });
-    
+
     _audioPlayer.onDurationChanged.listen((duration) {
       if (mounted) setState(() => _duration = duration);
     });
-    
+
     _audioPlayer.onPositionChanged.listen((position) {
       if (mounted) setState(() => _position = position);
     });
-    
+
     _audioPlayer.onPlayerComplete.listen((event) {
       if (mounted) {
         setState(() {
@@ -200,43 +278,80 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   }
 
   Future<void> _initialize() async {
-    // Load scroll position first
-  await _loadScrollPosition();
-  // Then load verses
-  await _loadVerses();
-  }
-
-  Future<void> _saveLastClickedVerse(int verse) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('last_clicked_${widget.surahId}', verse);
-    setState(() => _lastClickedVerse = verse);
+    await _loadReadingPosition();
+    await _loadVerses();
   }
 
   Future<void> _loadVerses() async {
-  try {
-    final quranData = await QuranServices.loadLocalVerses(widget.surahId);
+    try {
+      final quranData = await QuranServices.loadLocalVerses(widget.surahId);
+      setState(() {
+        verses = quranData.verses;
+        filteredVerses = verses;
+        _allVersesText = _combineVersesWithIcons(verses!);
+        isLoading = false;
+        _currentPage = _currentPage.clamp(0, _maxPageIndexForCurrentList());
+      });
+
+      if (_searchQuery.isEmpty) {
+        _pendingRestoreOffset = await _loadScrollOffsetForPage(_currentPage);
+        _restoreScrollForCurrentPage();
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(_currentPage);
+        }
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage =
+            isEnglish ? 'Error loading verses' : 'حدث خطأ في تحميل الآيات';
+        isLoading = false;
+      });
+    }
+  }
+
+  int _maxPageIndexForCurrentList() {
+    final list = filteredVerses ?? verses ?? <Verse>[];
+    if (list.isEmpty) return 0;
+    return (list.length - 1) ~/ _pageSize;
+  }
+
+  void _goToPage(int page) {
+    final next = page.clamp(0, _maxPageIndexForCurrentList());
+    if (next == _currentPage) return;
+
+    _saveScrollOffsetForPage(_currentPage);
     setState(() {
-      verses = quranData.verses;
-      filteredVerses = verses;
-      _allVersesText = _combineVersesWithIcons(verses!);
-      isLoading = false;
+      _currentPage = next;
     });
-    
-    // After verses are loaded, restore scroll position
+
+    _saveLastPage();
+
+    _loadScrollOffsetForPage(_currentPage).then((value) {
+      _pendingRestoreOffset = value;
+      _restoreScrollForCurrentPage();
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients && _lastScrollPosition > 0) {
-        _scrollController.jumpTo(_lastScrollPosition);
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
       }
     });
-  } catch (e) {
-    setState(() {
-      errorMessage = isEnglish
-          ? 'Error loading verses'
-          : 'حدث خطأ في تحميل الآيات';
-      isLoading = false;
-    });
   }
-}
+
+  List<Verse> _pageItemsForIndex(int pageIndex) {
+    final list = filteredVerses ?? verses ?? <Verse>[];
+    if (list.isEmpty) return <Verse>[];
+    final start = (pageIndex * _pageSize).clamp(0, list.length);
+    final end = (start + _pageSize).clamp(0, list.length);
+    return list.sublist(start, end);
+  }
 
   String _toArabicNumber(int number, bool withIcon) {
     final arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -254,10 +369,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
       final verse = verses[i];
       final verseNumber = i + 1;
       final verseIcon = _toArabicNumber(verseNumber, true);
-      
+
       buffer.write(verse.textUthmani);
       buffer.write(' $verseIcon');
-      
+
       if (i < verses.length - 1) {
         buffer.write(' ');
       }
@@ -268,7 +383,7 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
   Future<void> _playSurah() async {
     try {
       setState(() => _isPlayButtonLoading = true);
-      
+
       if (_isDownloaded && _localAudioPath != null) {
         await _audioPlayer.play(DeviceFileSource(_localAudioPath!));
       } else {
@@ -280,20 +395,22 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
         _isPlayButtonLoading = false;
       });
     } catch (e) {
-  setState(() => _isPlayButtonLoading = false);
+      setState(() => _isPlayButtonLoading = false);
 
-  String message = isEnglish
-        ? 'No internet connection. Please download the verse to play offline.'
-        : 'لا يوجد اتصال بالإنترنت. يرجى تنزيل السورة للتشغيل دون اتصال.';
+      String message = isEnglish
+          ? 'No internet connection. Please download the verse to play offline.'
+          : 'لا يوجد اتصال بالإنترنت. يرجى تنزيل السورة للتشغيل دون اتصال.';
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Directionality(
-        textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
-        child: Text(message)),
-    ),
-  );
-}
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Directionality(
+              textDirection: Globals.languageState!
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
+              child: Text(message)),
+        ),
+      );
+    }
   }
 
   Future<void> _pauseSurah() async {
@@ -310,94 +427,82 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
     });
   }
 
-  Future<void> _changePlaybackSpeed() async {
-    double newSpeed;
-    if (_playbackSpeed == 1.0) {
-      newSpeed = 1.5;
-    } else if (_playbackSpeed == 1.5) {
-      newSpeed = 0.5;
-    } else {
-      newSpeed = 1.0;
-    }
-    
-    setState(() => _playbackSpeed = newSpeed);
-    await _audioPlayer.setPlaybackRate(newSpeed);
-  }
-
   Future<void> _downloadAudio() async {
-  try {
-    final dir = await getApplicationDocumentsDirectory();
-    final filePath = '${dir.path}/surah_${widget.surahId}.mp3';
-    final file = File(filePath);
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final filePath = '${dir.path}/surah_${widget.surahId}.mp3';
+      final file = File(filePath);
 
-    if (await file.exists()) {
-      await file.delete();
-    }
+      if (await file.exists()) {
+        await file.delete();
+      }
 
-    if (mounted) {
-      setState(() {
-        _isDownloading = true;
-        _downloadProgress = 0.0;
-      });
-    }
+      if (mounted) {
+        setState(() {
+          _isDownloading = true;
+          _downloadProgress = 0.0;
+        });
+      }
 
-    final dio = Dio();
-    await dio.download(
-      _downloadBaseUrl,
-      filePath,
-      onReceiveProgress: (received, total) {
-        if (total != -1 && mounted) {
-          setState(() {
-            _downloadProgress = received / total;
-          });
-        }
-      },
-    );
+      final dio = Dio();
+      await dio.download(
+        _downloadBaseUrl,
+        filePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1 && mounted) {
+            setState(() {
+              _downloadProgress = received / total;
+            });
+          }
+        },
+      );
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('audio_${widget.surahId}', filePath);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('audio_${widget.surahId}', filePath);
 
-    if (mounted) {
-      setState(() {
-        _isDownloading = false;
-        _isDownloaded = true;
-        _localAudioPath = filePath;
-      });
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _isDownloaded = true;
+          _localAudioPath = filePath;
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Directionality(
-            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
-            child: Text(
-              isEnglish
-                  ? 'Audio downloaded successfully'
-                  : 'تم تنزيل الصوت بنجاح',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Directionality(
+              textDirection: Globals.languageState!
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
+              child: Text(
+                isEnglish
+                    ? 'Audio downloaded successfully'
+                    : 'تم تنزيل الصوت بنجاح',
+              ),
             ),
           ),
-        ),
-      );
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _isDownloading = false;
-      });
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Directionality(
-            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
-            child: Text(
-              isEnglish
-                  ? 'Download failed'
-                  : 'فشل التنزيل',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Directionality(
+              textDirection: Globals.languageState!
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
+              child: Text(
+                isEnglish ? 'Download failed' : 'فشل التنزيل',
+              ),
             ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
-}
 
   Future<void> _checkIfDownloaded() async {
     final prefs = await SharedPreferences.getInstance();
@@ -435,11 +540,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Directionality(
-            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            textDirection:
+                Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
             child: Text(
-              isEnglish 
-                  ? 'Audio deleted'
-                  : 'تم حذف الصوت',
+              isEnglish ? 'Audio deleted' : 'تم حذف الصوت',
             ),
           ),
         ),
@@ -448,11 +552,10 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Directionality(
-            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+            textDirection:
+                Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
             child: Text(
-              isEnglish 
-                  ? 'Error deleting audio'
-                  : 'حدث خطأ أثناء حذف الصوت',
+              isEnglish ? 'Error deleting audio' : 'حدث خطأ أثناء حذف الصوت',
             ),
           ),
         ),
@@ -476,27 +579,29 @@ class _SurahDetailPageState extends State<SurahDetailPage> with WidgetsBindingOb
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () async {
           _audioPlayer.stop();
-          await _saveScrollPosition();
-if (mounted) Navigator.pop(context);
-
+          await _saveReadingPosition();
+          if (mounted) Navigator.pop(context);
         },
       ),
       centerTitle: true,
       title: _isSearching
           ? Directionality(
-            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
-            child: TextField(
+              textDirection: Globals.languageState!
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
+              child: TextField(
                 controller: _searchController,
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: isEnglish ? 'Search verses...' : 'ابحث في الآيات...',
+                  hintText:
+                      isEnglish ? 'Search verses...' : 'ابحث في الآيات...',
                   hintStyle: const TextStyle(color: Colors.white70),
                   border: InputBorder.none,
                 ),
                 cursorColor: Colors.white,
               ),
-          )
+            )
           : Column(
               children: [
                 Text(
@@ -520,7 +625,8 @@ if (mounted) Navigator.pop(context);
             ),
       actions: [
         IconButton(
-          icon: Icon(_isSearching ? Icons.close : Icons.search, color: Colors.white),
+          icon: Icon(_isSearching ? Icons.close : Icons.search,
+              color: Colors.white),
           onPressed: () {
             setState(() {
               _isSearching = !_isSearching;
@@ -536,121 +642,118 @@ if (mounted) Navigator.pop(context);
     );
   }
 
-
   Widget _buildBasmala() {
-  return Container(
-    width: double.infinity,
-    margin: const EdgeInsets.only(bottom: 5),
-    padding: const EdgeInsets.symmetric(vertical: 16),
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(
-          color: _primaryColor.withOpacity(0.2),
-          width: 1,
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: _primaryColor.withOpacity(0.2),
+            width: 1,
+          ),
         ),
       ),
-    ),
-    child: Text(
-      "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontFamily: arabicFontFamily,  // Changed to use the same font family as verses
-        fontSize: _fontSize + 4,       // Slightly larger than verse font size
-        fontWeight: FontWeight.bold,
-        color: _primaryColor,
-        height: 1.8,
-      ),
-    ),
-  );
-}
-
-  Widget _buildVerseRichText(List<InlineSpan> spans) {
-  return Container(
-    padding: const EdgeInsets.all(12),
-    child: RichText(
-      textAlign: TextAlign.justify,
-      textDirection: TextDirection.rtl,
-      text: TextSpan(
-        children: spans,
+      child: Text(
+        "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+        textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: _fontSize,
-          height: 2.0,
-          fontFamily: arabicFontFamily,
-          color: _textColor,
-        ),
-      ),
-    ),
-  );
-}
-
-
-  List<InlineSpan> _buildVerseSpans() {
-  final spans = <InlineSpan>[];
-  final versesToDisplay = filteredVerses ?? verses ?? [];
-
-  for (int i = 0; i < versesToDisplay.length; i++) {
-    final verse = versesToDisplay[i];
-    final verseNumber = verses!.indexOf(verse) + 1;
-    final verseIcon = _toArabicNumber(verseNumber, true);
-    final verseText = verse.textUthmani;
-
-    final isSelected = _selectedVerse == verseNumber;
-    final isHighlighted = _searchQuery.isNotEmpty &&
-        verse.textUthmani.contains(_searchQuery);
-
-    // Add verse text
-    spans.add(
-      TextSpan(
-        text: '$verseText ',
-        style: TextStyle(
-          fontFamily: arabicFontFamily,
-          color: isSelected ? _primaryColor : _textColor,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-        ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () {
-            setState(() {
-              _selectedVerse = verseNumber;
-            });
-            _showVerseOptions('$verseText $verseIcon', verseNumber);
-          },
-      ),
-    );
-
-    // Add verse number with enhanced styling
-    spans.add(
-      TextSpan(
-        text: '$verseIcon ',
-        style: TextStyle(
-          fontFamily: arabicFontFamily,
-          color: _primaryColor, // Use primary color for verse numbers
+          fontFamily:
+              arabicFontFamily, // Changed to use the same font family as verses
+          fontSize: _fontSize + 4, // Slightly larger than verse font size
           fontWeight: FontWeight.bold,
-          fontSize: _fontSize + 2, // Slightly larger than verse text
-          shadows: [
-            Shadow(
-              color: _primaryColor.withOpacity(0.2),
-              blurRadius: 2,
-              offset: const Offset(1, 1),
-            ),
-          ],
+          color: _primaryColor,
+          height: 1.8,
         ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () {
-            setState(() {
-              _selectedVerse = verseNumber;
-            });
-            _showVerseOptions('$verseText $verseIcon', verseNumber);
-          },
       ),
     );
   }
-  return spans;
-}
 
+  Widget _buildVerseRichText(List<InlineSpan> spans) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      child: RichText(
+        textAlign: TextAlign.justify,
+        textDirection: TextDirection.rtl,
+        text: TextSpan(
+          children: spans,
+          style: TextStyle(
+            fontSize: _fontSize,
+            height: 2.0,
+            fontFamily: arabicFontFamily,
+            color: _textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<InlineSpan> _buildVerseSpans(List<Verse> versesToDisplay) {
+    final spans = <InlineSpan>[];
+    for (int i = 0; i < versesToDisplay.length; i++) {
+      final verse = versesToDisplay[i];
+      final verseNumber = verses!.indexOf(verse) + 1;
+      final verseIcon = _toArabicNumber(verseNumber, true);
+
+      final verseText = verse.textUthmani;
+
+      final isSelected = _selectedVerse == verseNumber;
+      final isHighlighted =
+          _searchQuery.isNotEmpty && verse.textUthmani.contains(_searchQuery);
+
+      // Add verse text
+      spans.add(
+        TextSpan(
+          text: '$verseText ',
+          style: TextStyle(
+            fontFamily: arabicFontFamily,
+            color: isSelected ? _primaryColor : _textColor,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () {
+              setState(() {
+                _selectedVerse = verseNumber;
+              });
+              _showVerseOptions('$verseText $verseIcon', verseNumber);
+            },
+        ),
+      );
+
+      // Add verse number with enhanced styling
+      spans.add(
+        TextSpan(
+          text: '$verseIcon ',
+          style: TextStyle(
+            fontFamily: arabicFontFamily,
+            color: _primaryColor, // Use primary color for verse numbers
+            fontWeight: FontWeight.bold,
+            fontSize: _fontSize + 2, // Slightly larger than verse text
+            shadows: [
+              Shadow(
+                color: _primaryColor.withOpacity(0.2),
+                blurRadius: 2,
+                offset: const Offset(1, 1),
+              ),
+            ],
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () {
+              setState(() {
+                _selectedVerse = verseNumber;
+              });
+              _showVerseOptions('$verseText $verseIcon', verseNumber);
+            },
+        ),
+      );
+    }
+    return spans;
+  }
 
   void _showVerseOptions(String verseText, int verseNumber) {
     final verse = verses![verseNumber - 1];
-    
+
     showModalBottomSheet(
       context: context,
       builder: (context) {
@@ -678,7 +781,9 @@ if (mounted) Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Directionality(
-                          textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
+                          textDirection: Globals.languageState!
+                              ? TextDirection.ltr
+                              : TextDirection.rtl,
                           child: Text(
                             isEnglish ? 'Copied to clipboard' : 'تم النسخ',
                           ),
@@ -687,7 +792,6 @@ if (mounted) Navigator.pop(context);
                     );
                   },
                 ),
-                
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -707,7 +811,8 @@ if (mounted) Navigator.pop(context);
 
   void _shareVerse(Verse verse, int verseNumber) {
     final arabicNumber = _toArabicNumber(verseNumber, false);
-    final verseTextWithNumber = '${verse.textUthmani.trim()} (${_toArabicNumber(verseNumber, false)})';
+    final verseTextWithNumber =
+        '${verse.textUthmani.trim()} (${_toArabicNumber(verseNumber, false)})';
 
     final surahName = isEnglish ? widget.surahName : widget.arabicName;
 
@@ -746,107 +851,164 @@ if (mounted) Navigator.pop(context);
   }
 
   Widget _buildContent() {
-  if (verses == null) return Container();
+    if (verses == null) return Container();
 
-  return Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          backgroundColor.withOpacity(0.9),
-          backgroundColor.withOpacity(0.7),
+    final maxPage = _maxPageIndexForCurrentList();
+    final pageCount = maxPage + 1;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            backgroundColor.withOpacity(0.9),
+            backgroundColor.withOpacity(0.7),
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                // Main content with staggered animations
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (widget.surahId != 9 && widget.surahId != 1)
+                        _buildBasmala().animate().fadeIn(delay: 100.ms).slideY(
+                              begin: 0.2,
+                              end: 0,
+                              curve: Curves.easeOutCubic,
+                              duration: 400.ms,
+                            ),
+                      const SizedBox(height: 8),
+                      _buildSearchResultsInfo()
+                          .animate()
+                          .fadeIn(delay: 200.ms)
+                          .scaleXY(
+                            begin: 0.9,
+                            end: 1,
+                            curve: Curves.elasticOut,
+                          ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          IconButton(
+                            onPressed: _currentPage > 0
+                                ? () => _goToPage(_currentPage - 1)
+                                : null,
+                            icon:
+                                Icon(Icons.chevron_left, color: _primaryColor),
+                          ),
+                          Text(
+                            isEnglish
+                                ? 'Page ${_currentPage + 1} of $pageCount'
+                                : 'صفحة ${_toArabicNumber(_currentPage + 1, false)} من ${_toArabicNumber(pageCount, false)}',
+                            style: GoogleFonts.getFont(
+                              fontFamily,
+                              color: _textColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _currentPage < maxPage
+                                ? () => _goToPage(_currentPage + 1)
+                                : null,
+                            icon:
+                                Icon(Icons.chevron_right, color: _primaryColor),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: pageCount,
+                          onPageChanged: (index) {
+                            if (_searchQuery.isEmpty) {
+                              _saveScrollOffsetForPage(_currentPage);
+                            }
+
+                            setState(() {
+                              _currentPage = index;
+                            });
+
+                            _saveLastPage();
+
+                            _loadScrollOffsetForPage(_currentPage)
+                                .then((value) {
+                              _pendingRestoreOffset = value;
+                              _restoreScrollForCurrentPage();
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            final items = _pageItemsForIndex(index);
+                            final controller = _scrollControllerForPage(index);
+                            return SingleChildScrollView(
+                              controller: controller,
+                              physics: const BouncingScrollPhysics(),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: primaryColor.withOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.all(5),
+                                    child: _buildVerseRichText(
+                                            _buildVerseSpans(items))
+                                        .animate()
+                                        .fadeIn(delay: 150.ms)
+                                        .shimmer(
+                                          delay: 400.ms,
+                                          duration: 900.ms,
+                                          color: _primaryColor.withOpacity(0.1),
+                                        ),
+                                  )
+                                      .animate(
+                                          onPlay: (controller) =>
+                                              controller.repeat())
+                                      .shimmer(
+                                        duration: 3000.ms,
+                                        angle: -0.1,
+                                        size: 0.8,
+                                        delay: 1000.ms,
+                                        color: _primaryColor.withOpacity(0.05),
+                                      ),
+                                  const SizedBox(height: 80),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Enhanced audio controls animation
+          _buildAudioControls().animate().fadeIn(delay: 400.ms).slideY(
+                begin: 1,
+                end: 0,
+                curve: Curves.easeOut,
+                duration: 500.ms,
+              ),
         ],
       ),
-    ),
-    child: Column(
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              // Main content with staggered animations
-              SingleChildScrollView(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (widget.surahId != 9 && widget.surahId != 1) 
-                      _buildBasmala()
-                        .animate()
-                        .fadeIn(delay: 100.ms)
-                        .slideY(
-                          begin: 0.2,
-                          end: 0,
-                          curve: Curves.easeOutCubic,
-                          duration: 400.ms,
-                        ),
-
-                    const SizedBox(height: 8),
-                    
-                    _buildSearchResultsInfo()
-                      .animate()
-                      .fadeIn(delay: 200.ms)
-                      .scaleXY(
-                        begin: 0.9,
-                        end: 1,
-                        curve: Curves.elasticOut,
-                      ),
-
-                    const SizedBox(height: 16),
-                    
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: primaryColor.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(5),
-                      child: _buildVerseRichText(_buildVerseSpans())
-                        .animate()
-                        .fadeIn(delay: 300.ms)
-                        .shimmer(
-                          delay: 500.ms,
-                          duration: 1000.ms,
-                          color: _primaryColor.withOpacity(0.1),
-                        ),
-                    )
-                    .animate(onPlay: (controller) => controller.repeat())
-                    .shimmer(
-                      duration: 3000.ms,
-                      angle: -0.1,
-                      size: 0.8,
-                      delay: 1000.ms,
-                      color: _primaryColor.withOpacity(0.05),
-                    ),
-                    
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Enhanced audio controls animation
-        _buildAudioControls()
-          .animate()
-          .fadeIn(delay: 400.ms)
-          .slideY(
-            begin: 1,
-            end: 0,
-            duration: 500.ms,
-            curve: Curves.elasticOut,
-          ),
-      ],
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildAudioControls() {
     final bool hasDuration = _duration.inSeconds > 0;
@@ -860,49 +1022,55 @@ if (mounted) Navigator.pop(context);
               key: const ValueKey('audioControlsVisible'),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: _cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16))),
+                  color: _cardColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16))),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (_isDownloading)
-  Column(
-    children: [
-      LinearProgressIndicator(
-        value: _downloadProgress.clamp(0.0, 1.0),
-        backgroundColor: _primaryColor.withOpacity(0.1),
-        valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
-        minHeight: 2,
-      ),
-      Text(
-        '${(_downloadProgress * 100).toStringAsFixed(0)}%',
-        style: GoogleFonts.getFont(
-          fontFamily,
-          color: _primaryColor,
-          fontSize: 12,
-        ),
-      ),
-    ],
-  ),
+                    Column(
+                      children: [
+                        LinearProgressIndicator(
+                          value: _downloadProgress.clamp(0.0, 1.0),
+                          backgroundColor: _primaryColor.withOpacity(0.1),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(_primaryColor),
+                          minHeight: 2,
+                        ),
+                        Text(
+                          '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                          style: GoogleFonts.getFont(
+                            fontFamily,
+                            color: _primaryColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   if (hasDuration)
                     SliderTheme(
                       data: SliderThemeData(
                         overlayShape: SliderComponentShape.noOverlay,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 8),
                       ),
                       child: Slider(
-                        value: _position.inSeconds.clamp(0, _duration.inSeconds).toDouble(),
+                        value: _position.inSeconds
+                            .clamp(0, _duration.inSeconds)
+                            .toDouble(),
                         min: 0,
                         max: _duration.inSeconds.toDouble(),
                         onChanged: (value) async {
-                          await _audioPlayer.seek(Duration(seconds: value.toInt()));
+                          await _audioPlayer
+                              .seek(Duration(seconds: value.toInt()));
                         },
                         activeColor: _primaryColor,
                         inactiveColor: _primaryColor.withOpacity(0.3),
@@ -937,21 +1105,6 @@ if (mounted) Navigator.pop(context);
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Tooltip(
-                        message: isEnglish ? 'Playback Speed' : 'سرعة التشغيل',
-                        child: TextButton(
-                          onPressed: _changePlaybackSpeed,
-                          child: Text(
-                            '${_playbackSpeed}x',
-                            style: GoogleFonts.getFont(
-                              fontFamily,
-                              color: _primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
                       CircleAvatar(
                         radius: 28,
                         backgroundColor: _primaryColor,
@@ -992,87 +1145,78 @@ if (mounted) Navigator.pop(context);
   }
 
   Widget _buildLoading() {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
-        )
-        .animate(onPlay: (controller) => controller.repeat())
-        .rotate(duration: 2000.ms),
-        const SizedBox(height: 16),
-        Text(
-          isEnglish ? 'Loading Surah...' : 'جاري تحميل السورة...',
-          style: GoogleFonts.getFont(
-            fontFamily,
-            color: _textColor,
-          ),
-        )
-        .animate()
-        .fadeIn(delay: 300.ms)
-        .slideY(begin: 0.5),
-      ],
-    ),
-  );
-}
-
-  Widget _buildError() {
-  return Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.error_outline, color: _primaryColor, size: 48)
-          .animate()
-          .shake(duration: 600.ms)
-          .then()
-          .scaleXY(end: 1.1, duration: 300.ms)
-          .then()
-          .scaleXY(end: 1.0, duration: 300.ms),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            errorMessage,
-            textAlign: TextAlign.center,
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_primaryColor),
+          )
+              .animate(onPlay: (controller) => controller.repeat())
+              .rotate(duration: 2000.ms),
+          const SizedBox(height: 16),
+          Text(
+            isEnglish ? 'Loading Surah...' : 'جاري تحميل السورة...',
             style: GoogleFonts.getFont(
               fontFamily,
               color: _textColor,
-              fontSize: 16,
             ),
-          )
-          .animate()
-          .fadeIn(delay: 300.ms)
-          .slideY(begin: 0.5),
-        ),
-        const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: _loadVerses,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _primaryColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          child: Text(
-            isEnglish ? 'Retry' : 'إعادة المحاولة',
-            style: GoogleFonts.getFont(
-              fontFamily,
-              color: Colors.white,
-            ),
-          ),
-        )
-        .animate(delay: 500.ms)
-        .scaleXY(
-          begin: 0.8,
-          end: 1,
-          curve: Curves.elasticOut,
-        ),
-      ],
-    ),
-  );
-}
+          ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.5),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildError() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: _primaryColor, size: 48)
+              .animate()
+              .shake(duration: 600.ms)
+              .then()
+              .scaleXY(end: 1.1, duration: 300.ms)
+              .then()
+              .scaleXY(end: 1.0, duration: 300.ms),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              errorMessage,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.getFont(
+                fontFamily,
+                color: _textColor,
+                fontSize: 16,
+              ),
+            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.5),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadVerses,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              isEnglish ? 'Retry' : 'إعادة المحاولة',
+              style: GoogleFonts.getFont(
+                fontFamily,
+                color: Colors.white,
+              ),
+            ),
+          ).animate(delay: 500.ms).scaleXY(
+                begin: 0.8,
+                end: 1,
+                curve: Curves.elasticOut,
+              ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildBody() {
     if (isLoading) {
@@ -1086,15 +1230,6 @@ if (mounted) Navigator.pop(context);
 
   @override
   Widget build(BuildContext context) {
-    // Restore scroll position if needed
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_scrollController.hasClients && 
-        _lastScrollPosition > 0 && 
-        _scrollController.offset == 0) {
-      _scrollController.jumpTo(_lastScrollPosition);
-    }
-  });
-
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
@@ -1109,127 +1244,154 @@ if (mounted) Navigator.pop(context);
             child: _buildBody(),
           ),
         ),
-        floatingActionButton: Column(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    FloatingActionButton(
-      heroTag: 'zoom_out',
-      mini: true,
-      backgroundColor: _primaryColor,
-      onPressed: () {
-        setState(() {
-          if (_fontSize > 16) {
-            _fontSize -= 2;
-          }
-        });
-      },
-      child: const Icon(
-        Icons.zoom_out,
-        color: Colors.white,
-      ),
-    )
-    .animate(delay: 100.ms)
-    .slideX(begin: 50),
-    const SizedBox(height: 10),
-    FloatingActionButton(
-      heroTag: 'zoom_in',
-      mini: true,
-      backgroundColor: _primaryColor,
-      onPressed: () {
-        setState(() {
-          if (_fontSize < 36) {
-            _fontSize += 2;
-          }
-        });
-      },
-      child: const Icon(
-        Icons.zoom_in,
-        color: Colors.white,
-      ),
-    )
-    .animate(delay: 200.ms)
-    .slideX(begin: 50),
-    const SizedBox(height: 10),
-    FloatingActionButton(
-      heroTag: 'download',
-      mini: true,
-      backgroundColor: _primaryColor,
-      onPressed: _isDownloading 
-          ? null
-          : () {
-              if (_isDownloaded) {
-                _deleteDownloadedAudio();
-              } else {
-                _downloadAudio();
-              }
-            },
-      child: _isDownloading
-          ? Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    value: _downloadProgress,
-                    strokeWidth: 2,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButton: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.only(
+            bottom: _showAudioControls ? 130 : 0,
+            right: 8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AnimatedOpacity(
+                opacity: _isFabMenuOpen ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 150),
+                child: IgnorePointer(
+                  ignoring: !_isFabMenuOpen,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FloatingActionButton(
+                        heroTag: 'zoom_out',
+                        mini: true,
+                        backgroundColor: _primaryColor,
+                        onPressed: () {
+                          setState(() {
+                            if (_fontSize > 16) {
+                              _fontSize -= 2;
+                            }
+                          });
+                        },
+                        child: const Icon(
+                          Icons.zoom_out,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      FloatingActionButton(
+                        heroTag: 'zoom_in',
+                        mini: true,
+                        backgroundColor: _primaryColor,
+                        onPressed: () {
+                          setState(() {
+                            if (_fontSize < 36) {
+                              _fontSize += 2;
+                            }
+                          });
+                        },
+                        child: const Icon(
+                          Icons.zoom_in,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      FloatingActionButton(
+                        heroTag: 'download',
+                        mini: true,
+                        backgroundColor: _primaryColor,
+                        onPressed: _isDownloading
+                            ? null
+                            : () {
+                                if (_isDownloaded) {
+                                  _deleteDownloadedAudio();
+                                } else {
+                                  _downloadAudio();
+                                }
+                              },
+                        child: _isDownloading
+                            ? Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      value: _downloadProgress,
+                                      strokeWidth: 2,
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                              Colors.white),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(_downloadProgress * 100).toStringAsFixed(0)}%',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Icon(
+                                _isDownloaded ? Icons.delete : Icons.download,
+                                color: Colors.white,
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      FloatingActionButton(
+                        heroTag: 'play',
+                        mini: true,
+                        backgroundColor: _primaryColor,
+                        onPressed: _isPlayButtonLoading
+                            ? null
+                            : () {
+                                if (_isPlaying) {
+                                  _stopSurah();
+                                } else {
+                                  _playSurah();
+                                }
+                              },
+                        child: _isPlayButtonLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : Icon(
+                                _isPlaying ? Icons.stop : Icons.play_arrow,
+                                color: Colors.white,
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                   ),
                 ),
-                Text(
-                  '${(_downloadProgress * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            )
-          : Icon(
-              _isDownloaded ? Icons.delete : Icons.download,
-              color: Colors.white,
-            ),
-    )
-    .animate(delay: 300.ms)
-    .slideX(begin: 50),
-    const SizedBox(height: 10),
-    FloatingActionButton(
-      heroTag: 'play',
-      backgroundColor: _primaryColor,
-      onPressed: _isPlayButtonLoading 
-          ? null
-          : () {
-              if (_isPlaying) {
-                _stopSurah();
-              } else {
-                _playSurah();
-              }
-            },
-      child: _isPlayButtonLoading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
-            )
-          : Icon(
-              _isPlaying ? Icons.stop : Icons.play_arrow,
-              color: Colors.white,
-            ),
-    )
-    .animate(delay: 400.ms)
-    .slideX(begin: 50)
-    .then()
-    .shake(
-      hz: 0.5,
-      curve: Curves.easeInOut,
-      duration: 2000.ms,
-    ),
-  ],
-),     ),
-);
-}
+              FloatingActionButton(
+                heroTag: 'fab_menu',
+                backgroundColor: _primaryColor,
+                onPressed: () {
+                  setState(() {
+                    _isFabMenuOpen = !_isFabMenuOpen;
+                  });
+                },
+                child: Icon(
+                  _isFabMenuOpen ? Icons.close : Icons.menu,
+                  color: Colors.white,
+                ),
+              ),
+
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

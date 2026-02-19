@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:islamic_app/screens/bottom_bar.dart';
 import 'package:islamic_app/services/app_lunch_services.dart';
+import 'package:islamic_app/services/notification_services.dart';
+
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,14 +17,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeAndNavigate();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeAndNavigate();
+    });
   }
 
   Future<void> _initializeAndNavigate() async {
     try {
       // Start both image precaching and app logic
       await Future.wait([
-        precacheImage(const AssetImage('assets/background.jpg'), context),
+        precacheImage(
+            const AssetImage('assets/images/background.jpg'), context),
         AppLaunchService.initializeApp(),
       ]);
 
@@ -32,9 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
           MaterialPageRoute(builder: (context) => const BottomBar()),
         );
       }
-    } catch (e) {
-      debugPrint("❌ Error during splash init: $e");
-    }
+    } catch (e) {}
   }
 
   @override
@@ -43,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: Colors.white,
       body: Center(
         child: Image(
-          image: AssetImage("assets/ic_launcher.jpg"),
+          image: AssetImage("assets/images/ic_launcher.jpg"),
           fit: BoxFit.cover,
         ),
       ),

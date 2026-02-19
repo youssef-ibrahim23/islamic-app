@@ -215,7 +215,7 @@ class _CompassPageState extends State<CompassPage>
         ],
       ),
       image: const DecorationImage(
-        image: AssetImage("assets/background.jpg"),
+        image: AssetImage("assets/images/background.jpg"),
         fit: BoxFit.cover,
         opacity: 0.9,
       ),
@@ -259,10 +259,13 @@ class _CompassPageState extends State<CompassPage>
           ),
           Transform.rotate(
             angle: -_deviceOrientation * (pi / 180),
-            child: CompassMarkings(size: compassSize, isEnglish: Globals.languageState!),
+            child: CompassMarkings(
+                size: compassSize, isEnglish: Globals.languageState!),
           ),
-          KaabaIndicator(angle: angle + _deviceOrientation, compassSize: compassSize),
-          QiblaIndicator(angle: angle + _deviceOrientation, compassSize: compassSize),
+          KaabaIndicator(
+              angle: angle + _deviceOrientation, compassSize: compassSize),
+          QiblaIndicator(
+              angle: angle + _deviceOrientation, compassSize: compassSize),
           const CenterPoint(),
         ],
       ),

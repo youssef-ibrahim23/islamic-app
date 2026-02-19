@@ -11,7 +11,8 @@ class HadithService {
   /// Loads hadiths in a specified number range from local assets
   static Future<List<Hadith>> loadHadithsByRange(int start, int end) async {
     try {
-      final String response = await rootBundle.loadString('assets/Ahadith.JSON');
+      final String response =
+          await rootBundle.loadString('assets/data/Ahadith.JSON');
       final data = json.decode(response);
       final welcome = Welcome.fromJson(data);
 
@@ -19,7 +20,6 @@ class HadithService {
         return hadith.number >= start && hadith.number <= end;
       }).toList();
     } catch (e) {
-      print("❌ Error loading hadiths by range: $e");
       return [];
     }
   }
@@ -32,7 +32,8 @@ class HadithService {
     try {
       final prefs = await SharedPreferences.getInstance();
       Globals.currentRangeStart = prefs.getInt("bukhari_range_start") ?? 1;
-      Globals.currentRangeEnd = Globals.currentRangeStart + Globals.rangeSize - 1;
+      Globals.currentRangeEnd =
+          Globals.currentRangeStart + Globals.rangeSize - 1;
     } catch (_) {
       Globals.currentRangeStart = 1;
       Globals.currentRangeEnd = Globals.rangeSize;
@@ -58,7 +59,7 @@ class HadithService {
       final List<Hadith> hadiths = await loadHadithsByRange(start, end);
       Globals.hadiths = hadiths;
     } catch (e) {
-      print("❌ Error loading hadiths: $e");
+
       Globals.hadiths = [];
     } finally {
       setLoading(false);
@@ -102,7 +103,7 @@ class HadithService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt("bukhari_range_start", newStart);
     } catch (e) {
-      print("⚠️ Failed to save hadith range: $e");
+
     }
 
     await loadHadiths(newStart, newEnd, setLoading, refreshUI);
@@ -126,7 +127,8 @@ class HadithService {
         ? '\n\nReference: ${Globals.referenceUrl}'
         : '';
 
-    final hadithNumber = convertNumbersToArabic(hadith.number.toString(), isEnglish);
+    final hadithNumber =
+        convertNumbersToArabic(hadith.number.toString(), isEnglish);
 
     final String shareText = isEnglish
         ? '''
@@ -150,7 +152,8 @@ ${hadith.id}$reference
 
     Share.share(
       shareText,
-      subject: isEnglish ? 'Hadith from Sahih al-Bukhari' : 'حديث من صحيح البخاري',
+      subject:
+          isEnglish ? 'Hadith from Sahih al-Bukhari' : 'حديث من صحيح البخاري',
     );
   }
 }

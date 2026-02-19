@@ -77,7 +77,7 @@ class KaabaIndicator extends StatelessWidget {
           Positioned(
             top: size * 0.1,
             child: Image.asset(
-              'assets/kaaba.png', // Path to your image asset
+              'assets/images/kaaba.png', // Path to your image asset
               width: size * 0.7,
               height: size * 0.7,
               fit: BoxFit.contain,

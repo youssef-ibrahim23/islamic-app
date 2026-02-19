@@ -10,10 +10,11 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:adhan/adhan.dart';
 
 import 'package:islamic_app/services/notification_services.dart';
+import 'package:islamic_app/services/home_services.dart';
 import 'package:islamic_app/globals.dart';
 
 class AppLaunchService {
-   static bool _timezoneInitialized = false;
+  static bool _timezoneInitialized = false;
 
   static const Map<String, String> _tzMap = {
     'EG': 'Africa/Cairo',
@@ -36,15 +37,13 @@ class AppLaunchService {
 
       await Future.wait([
         _handleFirstRun(prefs),
-        NotificationService().init(),
         _setupTimezoneOnce(prefs),
         _loadLanguageState(prefs),
+        HomeServices.loadLastSurahAsync(),
       ]);
-
+      await NotificationService().init();
       unawaited(_scheduleStartupTasks());
-    } catch (e) {
-      debugPrint("❌ initializeApp failed: $e");
-    }
+    } catch (e) {}
   }
 
   static Future<void> requestPermissions() async {
@@ -56,9 +55,7 @@ class AppLaunchService {
 
     final statuses = await permissions.request();
     for (final entry in statuses.entries) {
-      if (!entry.value.isGranted) {
-        debugPrint("⚠️ Permission denied: ${entry.key}");
-      }
+      if (!entry.value.isGranted) {}
     }
   }
 
@@ -69,11 +66,8 @@ class AppLaunchService {
         final tempDir = await getTemporaryDirectory();
         if (await tempDir.exists()) {
           await tempDir.delete(recursive: true);
-          debugPrint("✅ Temp directory cleared.");
         }
-      } catch (e) {
-        debugPrint("❌ Error clearing temp dir: $e");
-      }
+      } catch (e) {}
     }
   }
 
@@ -91,7 +85,7 @@ class AppLaunchService {
       if (await _checkLocationPermission()) {
         final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.low,
-          timeLimit: const Duration(seconds: 5),
+          timeLimit: const Duration(seconds: 30),
         );
 
         prefs
@@ -108,17 +102,12 @@ class AppLaunchService {
           tzName = _tzMap[countryCode]!;
         }
       }
-    } catch (e) {
-      debugPrint("⚠️ Fallback timezone: $tzName due to error: $e");
-    }
+    } catch (e) {}
 
     try {
       tzData.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation(tzName));
-      debugPrint("⏰ Timezone set: $tzName");
-    } catch (e) {
-      debugPrint("❌ Failed to initialize timezone: $e");
-    }
+    } catch (e) {}
   }
 
   static Future<bool> _checkLocationPermission() async {
@@ -138,9 +127,7 @@ class AppLaunchService {
         scheduleDailyAzkarReminders(),
         scheduleMonthlyAzanUpdate(),
       ]);
-    } catch (e) {
-      debugPrint("❌ Startup task scheduling failed: $e");
-    }
+    } catch (e) {}
   }
 
   static Future<void> scheduleAllAzans() async {
@@ -157,7 +144,6 @@ class AppLaunchService {
       if (prevLat == position.latitude &&
           prevLon == position.longitude &&
           lastMonth == key) {
-        debugPrint("📆 Azans already scheduled for $key");
         return;
       }
 
@@ -194,11 +180,7 @@ class AppLaunchService {
         ..setDouble("lat", position.latitude)
         ..setDouble("lon", position.longitude)
         ..setString("lastScheduledMonth", key);
-
-      debugPrint("✅ Azans scheduled for $key");
-    } catch (e) {
-      debugPrint("❌ Error scheduling Azans: $e");
-    }
+    } catch (e) {}
   }
 
   static Future<void> scheduleDailyAzkarReminders() async {
@@ -230,10 +212,7 @@ class AppLaunchService {
       ]);
 
       await prefs.setBool('azkar_scheduled', true);
-      debugPrint("✅ Daily Azkar reminders set.");
-    } catch (e) {
-      debugPrint("❌ Failed to schedule Azkar: $e");
-    }
+    } catch (e) {}
   }
 
   static Future<void> scheduleMonthlyAzanUpdate() async {
@@ -249,10 +228,6 @@ class AppLaunchService {
       final runTime = tz.TZDateTime(tz.local, nextYear, nextMonth, 1, 4);
       await NotificationService().scheduleBackgroundTask(runTime);
       await prefs.setString("lastMonthlyAzanUpdate", nextKey);
-
-      debugPrint("📅 Monthly Azan update scheduled at $runTime");
-    } catch (e) {
-      debugPrint("❌ Failed to schedule monthly update: $e");
-    }
+    } catch (e) {}
   }
 }

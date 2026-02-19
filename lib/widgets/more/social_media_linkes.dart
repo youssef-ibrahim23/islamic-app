@@ -23,23 +23,17 @@ class SocialMediaLinksWidget extends StatelessWidget {
       children: [
         const SocialIconWidget(
           icon: FontAwesomeIcons.linkedin,
-          url: 'https://www.linkedin.com/company/ntg-clarity',
+          url: 'https://www.linkedin.com/in/youssef-mohamed-052581383/',
           color: Color(0xFF0077B5),
         ),
-        const SizedBox(width: 30),
+        const SizedBox(width: 50),
 
         // ✅ Mail button using IconButton
         const EmailIconWidget(
-          email: 'egypt@ntgclarity.com',
+          email: 'ymohamed2602@gmail.com',
           color: primaryColor,
         ),
 
-        const SizedBox(width: 30),
-        const SocialIconWidget(
-          icon: FontAwesomeIcons.globe,
-          url: 'https://ntgclarity.com/',
-          color: Colors.green,
-        ),
       ]
           .animate(interval: 100.ms)
           .slideX(begin: 0.5, end: 0, curve: Curves.easeOutBack),

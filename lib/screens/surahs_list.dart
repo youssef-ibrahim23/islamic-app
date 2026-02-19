@@ -23,11 +23,11 @@ class _QuranPageState extends State<QuranPage> {
   bool isLoading = false;
   bool hasError = false;
   bool isSearching = false;
-  
 
   // Helper getters for language and direction
   bool get isEnglish => Globals.languageState ?? true;
-  TextDirection get textDirection => isEnglish ? TextDirection.ltr : TextDirection.ltr;
+  TextDirection get textDirection =>
+      isEnglish ? TextDirection.ltr : TextDirection.ltr;
   String get fontFamily => isEnglish ? 'Roboto' : 'Tajawal';
 
   @override
@@ -62,7 +62,8 @@ class _QuranPageState extends State<QuranPage> {
         hasError = true;
         isLoading = false;
       });
-      _showErrorSnackbar(isEnglish ? "Failed to load Surahs" : "فشل تحميل السور");
+      _showErrorSnackbar(
+          isEnglish ? "Failed to load Surahs" : "فشل تحميل السور");
     }
   }
 
@@ -84,18 +85,6 @@ class _QuranPageState extends State<QuranPage> {
     });
   }
 
-  Future<void> _saveLastSurah(Chapter chapter) async {
-  final isEnglish = Globals.languageState ?? true;
-
-  Globals.surahId = chapter.id;
-  Globals.currentSora = isEnglish ? chapter.nameSimple : chapter.nameArabic;
-
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt('lastSurahId', chapter.id);
-  await prefs.setString('lastSurahName', chapter.nameSimple);
-  await prefs.setString('lastSurahArabicName', chapter.nameArabic);
-}
-
   Future<void> _toggleFavorite(Chapter chapter) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -103,7 +92,8 @@ class _QuranPageState extends State<QuranPage> {
       if (favoriteSurahIds.containsKey(chapter.id)) {
         favoriteSurahIds.remove(chapter.id);
       } else {
-        favoriteSurahIds[chapter.id] = '${chapter.nameSimple} | ${chapter.nameArabic}';
+        favoriteSurahIds[chapter.id] =
+            '${chapter.nameSimple} | ${chapter.nameArabic}';
       }
     });
 
@@ -139,7 +129,6 @@ class _QuranPageState extends State<QuranPage> {
   }
 
   void _navigateToSurahDetail(Chapter chapter) {
-    _saveLastSurah(chapter);
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -285,8 +274,10 @@ class _QuranPageState extends State<QuranPage> {
       elevation: 0,
       title: isSearching
           ? Directionality(
-            textDirection: Globals.languageState! ? TextDirection.ltr : TextDirection.rtl,
-            child: TextField(
+              textDirection: Globals.languageState!
+                  ? TextDirection.ltr
+                  : TextDirection.rtl,
+              child: TextField(
                 controller: _searchController,
                 autofocus: true,
                 style: TextStyle(
@@ -302,7 +293,7 @@ class _QuranPageState extends State<QuranPage> {
                   border: InputBorder.none,
                 ),
               ),
-          )
+            )
           : Text(
               isEnglish ? "Al Quran" : "القرآن الكريم",
               style: TextStyle(
@@ -414,16 +405,16 @@ class _QuranPageState extends State<QuranPage> {
       );
     }
 
-    final isFilteredEmpty = filteredChapters != null && filteredChapters!.isEmpty;
+    final isFilteredEmpty =
+        filteredChapters != null && filteredChapters!.isEmpty;
 
     return Directionality(
       textDirection: textDirection,
       child: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
-            image: Image.asset("assets/background.jpg").image,
+            image: AssetImage("assets/images/background.jpg"),
             fit: BoxFit.cover,
-            opacity: 0.1,
           ),
         ),
         child: RefreshIndicator(
@@ -459,5 +450,4 @@ class _QuranPageState extends State<QuranPage> {
     _searchController.dispose();
     super.dispose();
   }
-
 }

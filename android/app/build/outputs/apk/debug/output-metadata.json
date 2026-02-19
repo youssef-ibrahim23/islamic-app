@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.example.islamic_app",
+  "applicationId": "com.developer.islamic_app",
   "variantName": "debug",
   "elements": [
     {

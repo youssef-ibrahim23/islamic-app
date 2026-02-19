@@ -36,7 +36,7 @@ class _MoreState extends State<More> {
             ],
           ),
           image: const DecorationImage(
-            image: AssetImage("assets/background.jpg"),
+            image: AssetImage("assets/images/background.jpg"),
             fit: BoxFit.cover,
             opacity: 0.9,
           ),

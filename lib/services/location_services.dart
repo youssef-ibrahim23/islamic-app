@@ -22,11 +22,16 @@ class LocationService {
 
     final Coordinates? coords = Locations().governorateCoordinates[governorate];
     if (coords != null) {
+      // Save to both key formats for compatibility
       await prefs.setDouble('latitude', coords.latitude);
       await prefs.setDouble('longitude', coords.longitude);
+      await prefs.setDouble('lat', coords.latitude);
+      await prefs.setDouble('lng', coords.longitude);
     } else {
       await prefs.remove('latitude');
       await prefs.remove('longitude');
+      await prefs.remove('lat');
+      await prefs.remove('lng');
     }
   }
 

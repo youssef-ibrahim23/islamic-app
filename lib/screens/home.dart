@@ -40,7 +40,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
     Globals.routeObserver.subscribe(this, ModalRoute.of(context)! as PageRoute);
 
     // ✅ Preload background image to prevent initial lag
-    precacheImage(const AssetImage('assets/background.jpg'), context);
+    precacheImage(const AssetImage('assets/images/background.jpg'), context);
   }
 
   Future<Map<String, dynamic>> _fetchSurahData() async {
@@ -72,7 +72,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/background.jpg'),
+            image: AssetImage('assets/images/background.jpg'),
             fit: BoxFit.cover,
             filterQuality: FilterQuality.low, // ✅ Speed up rendering
           ),
@@ -84,45 +84,61 @@ class _HomePageState extends State<HomePage> with RouteAware {
             child: Column(
               children: [
                 SizedBox(height: screenHeight * 0.06),
-
                 const CombinedDateWidget(
                   cardColor: cardColor,
                   textColor: textColor,
                 ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),
-
                 SizedBox(height: screenHeight * 0.03),
-
                 FutureBuilder<Map<String, dynamic>>(
                   future: _surahFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done &&
                         snapshot.hasData) {
+                      final data = snapshot.data!;
                       return DailyAyatCard(
-                        currentSora: snapshot.data!['name'],
-                        surahId: snapshot.data!['id'],
+                        currentSora: data['name'],
+                        surahId: data['id'],
                         accentColor: accentColor,
                         cardColor: cardColor,
                         textColor: textColor,
+                        ayatTextAr: data['ayatAr'] ??
+                            "ذلك الكتاب لا ريب فيه هدى للمتقين",
+                        ayatTextEn: data['ayatEn'] ??
+                            "This is the Scripture whereof there is no doubt, a guidance unto those who ward off (evil)",
+                        translationName: data['translationName'],
+                        verseNumber: data['verseNumber'],
                       ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2);
                     }
                     return const SizedBox.shrink();
                   },
                 ),
-
                 SizedBox(height: screenHeight * 0.03),
-
                 _buildCategoryRow(isEnglish, [
-                  _buildAnimatedCategory(FontAwesomeIcons.bookQuran, isEnglish ? "Quran" : "القرآن", const QuranPage(), 700),
-                  _buildAnimatedCategory(FontAwesomeIcons.handsPraying, isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 800),
-                  _buildAnimatedCategory(FontAwesomeIcons.mosque, isEnglish ? "Prayers" : "الصلاة", const PrayerTimesPage(), 900),
+                  _buildAnimatedCategory(FontAwesomeIcons.bookQuran,
+                      isEnglish ? "Quran" : "القرآن", const QuranPage(), 700),
+                  _buildAnimatedCategory(FontAwesomeIcons.handsPraying,
+                      isEnglish ? "Azkar" : "الأذكار", const AzkarPage(), 800),
+                  _buildAnimatedCategory(
+                      FontAwesomeIcons.mosque,
+                      isEnglish ? "Prayers" : "الصلاة",
+                      const PrayerTimesPage(),
+                      900),
                 ]),
                 SizedBox(height: screenHeight * 0.025),
                 _buildCategoryRow(isEnglish, [
-                  _buildAnimatedCategory(FontAwesomeIcons.kaaba, isEnglish ? "Counter" : "التسبيح", const Counter(), 1000),
-                  _buildAnimatedCategory(FontAwesomeIcons.calendarDays, isEnglish ? "Calendar" : "التقويم", const EnhancedCalendar(), 1100),
-                  _buildAnimatedCategory(FontAwesomeIcons.bookOpen, isEnglish ? "Ahadith" : "الأحاديث", const HadithScreen(), 1200),
+                  _buildAnimatedCategory(FontAwesomeIcons.kaaba,
+                      isEnglish ? "Counter" : "التسبيح", const Counter(), 1000),
+                  _buildAnimatedCategory(
+                      FontAwesomeIcons.calendarDays,
+                      isEnglish ? "Calendar" : "التقويم",
+                      const EnhancedCalendar(),
+                      1100),
+                  _buildAnimatedCategory(
+                      FontAwesomeIcons.bookOpen,
+                      isEnglish ? "Ahadith" : "الأحاديث",
+                      const HadithScreen(),
+                      1200),
                 ]),
-
                 SizedBox(height: screenHeight * 0.04),
               ],
             ),
@@ -132,7 +148,8 @@ class _HomePageState extends State<HomePage> with RouteAware {
     );
   }
 
-  Widget _buildAnimatedCategory(IconData icon, String label, Widget page, int durationMs) {
+  Widget _buildAnimatedCategory(
+      IconData icon, String label, Widget page, int durationMs) {
     return CategoryItem(
       icon: icon,
       label: label,

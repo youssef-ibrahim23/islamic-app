@@ -36,7 +36,7 @@ class DropDown {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: selectedCountry,
+              initialValue: selectedCountry,
               isExpanded: true,
               decoration: InputDecoration(
                 filled: true,
@@ -102,7 +102,7 @@ class DropDown {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: selectedGovernorate,
+              initialValue: selectedGovernorate,
               isExpanded: true,
               decoration: InputDecoration(
                 filled: true,

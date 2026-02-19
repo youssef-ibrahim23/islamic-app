@@ -4,7 +4,6 @@ import 'dart:async';
 import 'dart:core';
 import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
-import 'package:islamic_app/models/Azkar.dart';
 import 'package:islamic_app/models/hadith.dart';
 
 class Globals {
@@ -22,11 +21,16 @@ class Globals {
   static String currentSora = languageState! ? "Al-Fatiha" : "الفاتحة";
   static int? surahId;
   static bool? languageState;
+  // Daily verse cached during app launch (populated at splash time)
+  static String? dailyAyatAr;
+  static String? dailyAyatEn;
+  static String? dailyTranslationName;
+  static String? dailyVerseKey;
+  static int? dailyVerseNumber;
 
   /// ----------------------------
   /// Azkar & Counters
   /// ----------------------------
-  static Map<String, List<Azkar>> azkarCategories = {};
   static Map<String, Map<int, int>> currentCounts = {};
   static Map<String, Map<int, int>> completionCounts = {};
 

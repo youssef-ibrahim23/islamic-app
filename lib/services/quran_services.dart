@@ -6,13 +6,13 @@ class QuranServices {
   /// Loads verses from local JSON and filters them by the given surahId
   static Future<QuranVerses> loadLocalVerses(int surahId) async {
     try {
-      final String jsonString = await rootBundle.loadString('assets/Surah.JSON');
+      final String jsonString =
+          await rootBundle.loadString('assets/data/Surah.JSON');
       final Map<String, dynamic> jsonMap = json.decode(jsonString);
 
       final List<dynamic> rawVerses = jsonMap['verses'];
-      final List<Verse> allVerses = rawVerses
-          .map((verseJson) => Verse.fromJson(verseJson))
-          .toList();
+      final List<Verse> allVerses =
+          rawVerses.map((verseJson) => Verse.fromJson(verseJson)).toList();
 
       final List<Verse> filteredVerses = allVerses.where((verse) {
         try {
@@ -29,7 +29,8 @@ class QuranServices {
     } catch (e, stackTrace) {
       print("❌ Error loading Quran verses for surah ID $surahId: $e");
       print("📍 StackTrace: $stackTrace");
-      throw QuranVerseLoadException("Failed to load verses for Surah $surahId.");
+      throw QuranVerseLoadException(
+          "Failed to load verses for Surah $surahId.");
     }
   }
 }

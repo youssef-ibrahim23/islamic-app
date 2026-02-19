@@ -52,7 +52,7 @@ class LanguageDropDown extends StatelessWidget {
         fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
       ),
       icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
-      value: Globals.selectedLanguage,
+      initialValue: Globals.selectedLanguage,
       items: Globals.languages.map((language) {
         return DropdownMenuItem<String>(
           value: language,
