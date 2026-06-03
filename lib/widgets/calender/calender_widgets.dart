@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hijri/hijri_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/calender_services.dart';
+import 'package:islamic_app/services/date_services.dart';
 
 class SelectedDateCard extends StatelessWidget {
   final DateTime selectedDay;
@@ -24,11 +24,10 @@ class SelectedDateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hijriDate = HijriCalendar.fromDate(selectedDay);
+    final hijriDate = DateService.getHijriDateForDate(selectedDay);
     final gregorianDate = selectedDay;
 
     return Material(
-      
       elevation: elevation,
       borderRadius: borderRadius,
       color: const Color(0xFFF8F5EF),
@@ -77,7 +76,7 @@ class SelectedDateCard extends StatelessWidget {
   Widget _buildDateRow(
     BuildContext context, {
     required DateTime gregorianDate,
-    required HijriCalendar hijriDate,
+    required String hijriDate,
   }) {
     final weekday = getWeekdayName(gregorianDate);
 
@@ -109,9 +108,7 @@ class SelectedDateCard extends StatelessWidget {
             _buildDateColumn(
               context,
               title: isEnglish ? 'Hijri' : 'الهجري',
-              date: isEnglish
-                  ? hijriDate.toFormat("dd MMMM yyyy")
-                  : Globals.toArabicNumber(hijriDate.toFormat("dd MMMM yyyy")),
+              date: isEnglish ? hijriDate : Globals.toArabicNumber(hijriDate),
             ),
           ],
         ),

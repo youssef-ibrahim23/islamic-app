@@ -1,12 +1,12 @@
 // ignore_for_file: deprecated_member_use, library_prefixes
 
 import 'dart:io';
+import 'app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:islamic_app/screens/azkar.dart';
 import 'package:islamic_app/screens/prayer_times.dart';
 import 'package:islamic_app/screens/surahs_list.dart';
-import 'package:islamic_app/services/app_lunch_services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzData;
@@ -42,16 +42,18 @@ class NotificationService {
 
     bool isInitialized = sharedPreferences.getBool("isInitialized") ?? false;
     if (isInitialized) {
-      print(
+      AppLogger.log(
           "[NotificationService] init() skipped: already initialized (isInitialized=true)");
+      // Still need to ensure permissions are granted on every app start
+      await _requestPermissions();
       return;
     }
 
-    print("[NotificationService] init() starting...");
+    AppLogger.log("[NotificationService] init() starting...");
 
     tzData.initializeTimeZones();
 
-    print(
+    AppLogger.log(
         "[NotificationService] Timezones initialized. tz.local=${tz.local.name}");
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -67,20 +69,22 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         _handleNotificationResponse(response);
       },
+      onDidReceiveBackgroundNotificationResponse:
+          _handleBackgroundNotificationResponse,
     );
 
-    print("[NotificationService] Plugin initialized.");
+    AppLogger.log("[NotificationService] Plugin initialized.");
 
     await _requestPermissions();
     await _createNotificationChannels();
 
     await sharedPreferences.setBool("isInitialized", true);
 
-    print("Notification system initialized.");
+    AppLogger.log("Notification system initialized.");
   }
 
   void _handleNotificationResponse(NotificationResponse response) {
@@ -107,29 +111,41 @@ class NotificationService {
     }
   }
 
+  @pragma('vm:entry-point')
+  static void _handleBackgroundNotificationResponse(
+      NotificationResponse response) {
+    AppLogger.log(
+        "[NotificationService] Background notification received: ${response.payload}");
+    // Handle background notification if needed
+    // This ensures notifications work even when app is terminated
+  }
+
   Future<void> _requestPermissions() async {
-    print("[NotificationService] Requesting notification permissions...");
+    AppLogger.log(
+        "[NotificationService] Requesting notification permissions...");
     final status = await Permission.notification.status;
     if (!status.isGranted) {
-      print(
+      AppLogger.log(
           "[NotificationService] Permission.notification not granted yet. Requesting...");
       await Permission.notification.request();
     } else {
-      print("[NotificationService] Permission.notification already granted.");
+      AppLogger.log(
+          "[NotificationService] Permission.notification already granted.");
     }
 
     if (Platform.isIOS) {
-      print(
+      AppLogger.log(
           "[NotificationService] iOS detected. Requesting iOS notification permissions...");
       await _notificationsPlugin
           .resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(alert: true, badge: true, sound: false);
+          ?.requestPermissions(alert: true, badge: true, sound: true);
     }
   }
 
   Future<void> _createNotificationChannels() async {
-    print("[NotificationService] Creating Android notification channels...");
+    AppLogger.log(
+        "[NotificationService] Creating Android notification channels...");
     const channels = [
       AndroidNotificationChannel(
         _prayerChannelId,
@@ -137,9 +153,11 @@ class NotificationService {
         description: 'Channel for prayer time alerts',
         importance: Importance.max,
         enableVibration: true,
-        sound: null,
+        playSound: true,
+        sound: const RawResourceAndroidNotificationSound('azan'),
         ledColor: Color(0xFF0D47A1),
         enableLights: true,
+        showBadge: true,
       ),
       AndroidNotificationChannel(
         scheduleChannelId,
@@ -148,18 +166,10 @@ class NotificationService {
         importance: Importance.low,
       ),
       AndroidNotificationChannel(
-        quranChannelId,
-        'Quran Reminders',
-        description: 'Channel for daily Quran reading reminders',
-        importance: Importance.high,
-        enableVibration: true,
-        sound: null,
-      ),
-      AndroidNotificationChannel(
         azkarChannelId,
-        'Azkar Reminders',
+        'Azkar & Quran Reminders',
         description:
-            'Channel for morning, evening and sleeping azkar reminders',
+            'Channel for morning, evening, sleeping azkar and Quran reading reminders',
         importance: Importance.high,
         enableVibration: true,
         sound: null,
@@ -174,14 +184,14 @@ class NotificationService {
 
     if (androidPlugin != null) {
       for (final channel in channels) {
-        print(
+        AppLogger.log(
             "[NotificationService] Creating channel id='${channel.id}', name='${channel.name}', importance=${channel.importance}");
         await androidPlugin.createNotificationChannel(channel);
       }
-      print(
+      AppLogger.log(
           "[NotificationService] Android notification channels created: ${channels.length}");
     } else {
-      print(
+      AppLogger.log(
           "[NotificationService] AndroidFlutterLocalNotificationsPlugin is null. Channels not created (non-Android platform?)");
     }
   }
@@ -190,7 +200,7 @@ class NotificationService {
       {String? customBody}) async {
     final isEnglish = Globals.languageState ?? true;
 
-    print(
+    AppLogger.log(
         "[NotificationService] Showing prayer notification now: id=${title.hashCode}, title='$title', payload='prayer_$title'");
 
     final androidDetails = AndroidNotificationDetails(
@@ -199,8 +209,8 @@ class NotificationService {
       channelDescription: 'Channel for prayer time alerts',
       importance: Importance.max,
       priority: Priority.high,
-      playSound: false,
-      sound: null,
+      playSound: true,
+      sound: const RawResourceAndroidNotificationSound('azan'),
       autoCancel: true,
       color: const Color(0xFF0D47A1),
       largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
@@ -216,24 +226,25 @@ class NotificationService {
     );
 
     const iosDetails = DarwinNotificationDetails(
-      presentSound: false,
-      sound: null,
+      presentSound: true,
+      sound: 'azan.mp3',
       categoryIdentifier: 'prayer_category',
       threadIdentifier: 'prayer_notifications',
     );
 
     await _notificationsPlugin.show(
-      title.hashCode,
-      isEnglish ? 'Prayer Time 🕌' : 'وقت الصلاة 🕌',
-      customBody ??
+      id: title.hashCode,
+      title: isEnglish ? 'Prayer Time 🕌' : 'وقت الصلاة 🕌',
+      body: customBody ??
           (isEnglish
               ? 'It is time for $title prayer'
               : 'حان الآن وقت صلاة $title'),
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      notificationDetails:
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: 'prayer_$title',
     );
 
-    print(
+    AppLogger.log(
         "[NotificationService] Prayer notification shown successfully: id=${title.hashCode}");
   }
 
@@ -242,20 +253,36 @@ class NotificationService {
     DateTime dateTime, {
     String? customBody,
   }) async {
+    final canSchedule = await _ensureExactAlarmPermission();
+    if (!canSchedule) return;
+
     final isEnglish = Globals.languageState ?? true;
     final tzTime = tz.TZDateTime.from(dateTime, tz.local);
 
     final nowTz = tz.TZDateTime.now(tz.local);
     if (tzTime.isBefore(nowTz)) {
-      print(
+      AppLogger.log(
           "[NotificationService] schedulePrayerNotification() skipped: '$title' tzTime=$tzTime is before now=$nowTz");
       return;
     }
 
     final id = generatePrayerNotificationId(dateTime, title);
 
-    print(
-        "[NotificationService] Scheduling prayer notification: id=$id, title='$title', tzTime=$tzTime, payload='prayer_$title'");
+    final formattedTime =
+        "${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} "
+        "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+
+    AppLogger.log(
+      "🕌 Scheduling Prayer → $title at $formattedTime (tz: ${tzTime.toString()})",
+      name: "NotificationService",
+    );
+
+    // Log scheduling details
+    final now = tz.TZDateTime.now(tz.local);
+    final timeUntil = tzTime.difference(now);
+    AppLogger.log(
+        "⏰ Prayer Notification Details: ID=$id, Title='$title', Scheduled=$tzTime, TimeUntil=${timeUntil.inHours}h ${timeUntil.inMinutes % 60}m, Payload='prayer_$title'",
+        name: "NotificationService");
 
     final androidDetails = AndroidNotificationDetails(
       _prayerChannelId,
@@ -263,8 +290,8 @@ class NotificationService {
       channelDescription: 'Channel for prayer time alerts',
       importance: Importance.max,
       priority: Priority.high,
-      playSound: false,
-      sound: null,
+      playSound: true,
+      sound: const RawResourceAndroidNotificationSound('azan'),
       autoCancel: true,
       color: const Color(0xFF0D47A1),
       largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
@@ -277,26 +304,25 @@ class NotificationService {
     );
 
     const iosDetails = DarwinNotificationDetails(
-      presentSound: false,
-      sound: null,
+      presentSound: true,
+      sound: 'azan.mp3',
       categoryIdentifier: 'prayer_category',
       threadIdentifier: 'prayer_notifications',
     );
 
     await _notificationsPlugin.zonedSchedule(
-      id,
-      isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
-      customBody ?? (isEnglish ? '$title prayer time' : 'موعد صلاة $title'),
-      tzTime,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: id,
+      title: isEnglish ? 'Prayer Reminder 🕌' : 'تنبيه للصلاة 🕌',
+      body:
+          customBody ?? (isEnglish ? '$title prayer time' : 'موعد صلاة $title'),
+      scheduledDate: tzTime,
+      notificationDetails:
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: 'prayer_$title',
-      matchDateTimeComponents: DateTimeComponents.dateAndTime,
     );
 
-    print(
+    AppLogger.log(
         "[NotificationService] Prayer notification scheduled successfully: id=$id");
   }
 
@@ -310,10 +336,22 @@ class NotificationService {
       scheduledTime = scheduledTime.add(const Duration(days: 1));
     }
 
+    // Ensure timezone is properly set to Africa/Cairo (UTC+2)
+    if (tz.local.name == 'UTC') {
+      tz.setLocalLocation(tz.getLocation("Africa/Cairo"));
+    }
+
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    print(
+    AppLogger.log(
         "[NotificationService] Scheduling daily Quran reminder: id=$quranReminderId, time=${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}, tzTime=$tzTime, payload='quran_reminder'");
+
+    // Log scheduling details
+    final nowTz = tz.TZDateTime.now(tz.local);
+    final timeUntil = tzTime.difference(nowTz);
+    AppLogger.log(
+        "📖 Quran Reminder Details: ID=$quranReminderId, Scheduled=$tzTime, TimeUntil=${timeUntil.inHours}h ${timeUntil.inMinutes % 60}m, Payload='quran_reminder'",
+        name: "NotificationService");
 
     final androidDetails = AndroidNotificationDetails(
       quranChannelId,
@@ -343,26 +381,25 @@ class NotificationService {
     );
 
     await _notificationsPlugin.zonedSchedule(
-      quranReminderId,
-      isEnglish ? 'Quran Reminder 📖' : 'تذكير القرآن 📖',
-      (isEnglish
+      id: quranReminderId,
+      title: isEnglish ? 'Quran Reminder 📖' : 'تذكير القرآن 📖',
+      body: (isEnglish
           ? 'Take a moment to read Quran today and gain blessings'
           : 'خذ لحظة لقراءة القرآن اليوم واكتساب البركات'),
-      tzTime,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      scheduledDate: tzTime,
+      notificationDetails:
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: 'quran_reminder',
       matchDateTimeComponents: DateTimeComponents.time,
     );
 
-    print(
+    AppLogger.log(
         "[NotificationService] Daily Quran reminder scheduled successfully: id=$quranReminderId");
   }
 
   Future<void> scheduleDailyAzkarReminders() async {
-    print("[NotificationService] Scheduling daily Azkar reminders...");
+    AppLogger.log("[NotificationService] Scheduling daily Azkar reminders...");
     // Morning azkar at sunrise
     await scheduleAzkarReminder(
       id: morningAzkarId,
@@ -384,7 +421,8 @@ class NotificationService {
       type: AzkarType.sleeping,
     );
 
-    print("[NotificationService] Daily Azkar reminders scheduling finished.");
+    AppLogger.log(
+        "[NotificationService] Daily Azkar reminders scheduling finished.");
   }
 
   Future<void> scheduleAzkarReminder({
@@ -399,6 +437,11 @@ class NotificationService {
 
     if (scheduledTime.isBefore(now)) {
       scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
+
+    // Ensure timezone is properly set to Africa/Cairo (UTC+2)
+    if (tz.local.name == 'UTC') {
+      tz.setLocalLocation(tz.getLocation("Africa/Cairo"));
     }
 
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
@@ -427,8 +470,15 @@ class NotificationService {
         ),
     };
 
-    print(
+    AppLogger.log(
         "[NotificationService] Scheduling Azkar reminder: id=$id, type=$type, title='$title', tzTime=$tzTime, payload='$payload'");
+
+    // Log scheduling details
+    final nowTz = tz.TZDateTime.now(tz.local);
+    final timeUntil = tzTime.difference(nowTz);
+    AppLogger.log(
+        "📿 Azkar Reminder Details: ID=$id, Type=$type, Title='$title', Scheduled=$tzTime, TimeUntil=${timeUntil.inHours}h ${timeUntil.inMinutes % 60}m, Payload='$payload'",
+        name: "NotificationService");
 
     final androidDetails = AndroidNotificationDetails(
       azkarChannelId,
@@ -457,19 +507,17 @@ class NotificationService {
     );
 
     await _notificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzTime,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tzTime,
+      notificationDetails:
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: payload,
-      matchDateTimeComponents: DateTimeComponents.time,
     );
 
-    print(
+    AppLogger.log(
         "[NotificationService] Azkar reminder scheduled successfully: id=$id");
   }
 
@@ -539,80 +587,16 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      notificationId,
-      title,
-      body,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      id: notificationId,
+      title: title,
+      body: body,
+      notificationDetails:
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
 
-    print(
+    AppLogger.log(
         "[NotificationService] Rich Azkar notification shown: id=$notificationId, type=$type, payload='$payload'");
-  }
-
-  Future<void> cancelAllPrayerNotifications() async {
-    await _notificationsPlugin.cancelAll();
-  }
-
-  Future<void> cancelQuranReminder() async {
-    await _notificationsPlugin.cancel(quranReminderId);
-  }
-
-  Future<void> cancelAzkarReminders() async {
-    await _notificationsPlugin.cancel(morningAzkarId);
-    await _notificationsPlugin.cancel(eveningAzkarId);
-    await _notificationsPlugin.cancel(sleepingAzkarId);
-  }
-
-  Future<void> scheduleBackgroundTask(tz.TZDateTime time) async {
-    final isEnglish = Globals.languageState ?? true;
-
-    print(
-        "[NotificationService] Scheduling background task notification: id=$backgroundTaskId, tzTime=$time, payload='update_prayer'");
-
-    const androidDetails = AndroidNotificationDetails(
-      scheduleChannelId,
-      'Prayer Time Scheduler',
-      channelDescription: 'Channel for scheduling background prayer updates',
-      importance: Importance.low,
-      priority: Priority.low,
-      playSound: false,
-      ongoing: true,
-    );
-
-    const iosDetails = DarwinNotificationDetails(
-      presentSound: false,
-      threadIdentifier: 'prayer_scheduler',
-    );
-
-    await _notificationsPlugin.zonedSchedule(
-      backgroundTaskId,
-      isEnglish ? '⏰ Updating Prayer Times' : '⏰ تحديث مواعيد الصلاة',
-      isEnglish
-          ? 'Prayer times are being updated automatically'
-          : 'يتم الآن تحديث مواعيد الصلاة تلقائيًا',
-      time,
-      const NotificationDetails(android: androidDetails, iOS: iosDetails),
-      androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'update_prayer',
-    );
-
-    final now = tz.TZDateTime.now(tz.local);
-    final delay = time.difference(now);
-
-    print(
-        "[NotificationService] Background task notification scheduled. now=$now, will trigger in ${delay.inSeconds}s");
-
-    Future.delayed(delay, () async {
-      print(
-          "[NotificationService] Background task triggered. Calling AppLaunchService scheduling...");
-      await AppLaunchService.scheduleAllAzans();
-      await AppLaunchService.scheduleMonthlyAzanUpdate();
-      print(
-          "[NotificationService] AppLaunchService scheduling finished (scheduleAllAzans + scheduleMonthlyAzanUpdate)");
-    });
   }
 
   Future<void> showCustomNotification({
@@ -624,7 +608,7 @@ class NotificationService {
     String? payload,
     Color? color,
   }) async {
-    print(
+    AppLogger.log(
         "[NotificationService] Showing custom notification now: id=${title.hashCode}, title='$title', channelId='${channelId ?? _prayerChannelId}', payload='${payload ?? ''}'");
     final androidDetails = AndroidNotificationDetails(
       channelId ?? _prayerChannelId,
@@ -633,8 +617,8 @@ class NotificationService {
           channelDescription ?? 'Channel for prayer time alerts',
       importance: Importance.max,
       priority: Priority.high,
-      playSound: false,
-      sound: null,
+      playSound: true,
+      sound: const RawResourceAndroidNotificationSound('azan'),
       autoCancel: true,
       color: color ?? const Color(0xFF0D47A1),
       largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
@@ -647,19 +631,20 @@ class NotificationService {
     );
 
     const iosDetails = DarwinNotificationDetails(
-      presentSound: false,
-      sound: null,
+      presentSound: true,
+      sound: 'azan.mp3',
     );
 
     await _notificationsPlugin.show(
-      title.hashCode,
-      title,
-      body,
-      NotificationDetails(android: androidDetails, iOS: iosDetails),
+      id: title.hashCode,
+      title: title,
+      body: body,
+      notificationDetails:
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
       payload: payload,
     );
 
-    print(
+    AppLogger.log(
         "[NotificationService] Custom notification shown successfully: id=${title.hashCode}");
   }
 
@@ -676,5 +661,139 @@ class NotificationService {
     final base = int.parse(
         '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}');
     return base * 10 + (prayerMap[prayerName] ?? 0);
+  }
+
+  Future<void> cancelAllPrayerNotifications() async {
+    try {
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+
+      AppLogger.log("[NotificationService] Canceling prayer notifications...");
+
+      for (final notification in pending) {
+        // Check if it's a prayer notification by checking payload
+        if (notification.payload != null &&
+            notification.payload!.startsWith('prayer_')) {
+          await _notificationsPlugin.cancel(id: notification.id);
+          AppLogger.log(
+              "[NotificationService] Canceled prayer notification: id=${notification.id}");
+        }
+      }
+
+      AppLogger.log(
+          "[NotificationService] Prayer notifications cleanup completed");
+    } catch (e) {
+      AppLogger.log(
+          "[NotificationService] Error canceling prayer notifications: $e");
+    }
+  }
+
+  Future<void> printAllScheduledNotifications() async {
+    AppLogger.log(
+        "[NotificationService] Fetching all pending notifications...");
+    final pending = await _notificationsPlugin.pendingNotificationRequests();
+
+    if (pending.isEmpty) {
+      AppLogger.log("[NotificationService] No pending notifications found.");
+      return;
+    }
+
+    AppLogger.log(
+        "[NotificationService] Found ${pending.length} pending notification(s):");
+
+    // Get current time for reference
+    final now = tz.TZDateTime.now(tz.local);
+    AppLogger.log("[NotificationService] Current time: $now");
+
+    for (var i = 0; i < pending.length; i++) {
+      final req = pending[i];
+
+      // Log available information from PendingNotificationRequest
+      // Note: scheduledDate is not available in PendingNotificationRequest
+      AppLogger.log(
+          "  [$i] id: ${req.id}, title: '${req.title}', body: '${req.body}', payload: '${req.payload}'");
+    }
+  }
+
+  Future<bool> checkIfNotificationsAbleToPresent() async {
+    AppLogger.log(
+        "[NotificationService] Checking if notifications can be presented...");
+
+    final status = await Permission.notification.status;
+    if (!status.isGranted) {
+      AppLogger.log(
+          "[NotificationService] Notification permission is NOT granted.");
+      return false;
+    }
+
+    final enabled = await _areNotificationsEnabled();
+    if (!enabled!) {
+      AppLogger.log(
+          "[NotificationService] System notifications are disabled for this app.");
+      return false;
+    }
+
+    AppLogger.log(
+        "[NotificationService] Notifications can be presented (permission granted + system enabled).");
+    return true;
+  }
+
+  Future<bool?> _areNotificationsEnabled() async {
+    if (Platform.isAndroid) {
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin == null) return false;
+      return await androidPlugin.areNotificationsEnabled();
+    } else if (Platform.isIOS) {
+      final iosPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (iosPlugin == null) return false;
+      final permissions = await iosPlugin.checkPermissions();
+      return permissions != null &&
+          permissions.isSoundEnabled == true; // or check alert/badge
+    }
+    return true;
+  }
+
+  Future<bool> _ensureExactAlarmPermission() async {
+    if (!Platform.isAndroid) return true;
+
+    final androidPlugin =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin == null) {
+      AppLogger.log("[ExactAlarm] Android plugin is null.");
+      return false;
+    }
+
+    final canExact =
+        await androidPlugin.canScheduleExactNotifications() ?? false;
+
+    AppLogger.log("[ExactAlarm] canScheduleExactNotifications = $canExact");
+
+    if (canExact) return true;
+
+    AppLogger.log("[ExactAlarm] Exact alarm NOT allowed. Requesting...");
+
+    // Android 13+ runtime notification permission
+    if (!await Permission.notification.isGranted) {
+      await Permission.notification.request();
+    }
+
+    // Try requesting exact alarm permission (Android 14+)
+    try {
+      await androidPlugin.requestExactAlarmsPermission();
+    } catch (e) {
+      AppLogger.log("[ExactAlarm] requestExactAlarmsPermission failed: $e");
+    }
+
+    final recheck =
+        await androidPlugin.canScheduleExactNotifications() ?? false;
+
+    AppLogger.log("[ExactAlarm] After request → allowed = $recheck");
+
+    return recheck;
   }
 }

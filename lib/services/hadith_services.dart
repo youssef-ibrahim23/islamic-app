@@ -59,7 +59,6 @@ class HadithService {
       final List<Hadith> hadiths = await loadHadithsByRange(start, end);
       Globals.hadiths = hadiths;
     } catch (e) {
-
       Globals.hadiths = [];
     } finally {
       setLoading(false);
@@ -102,9 +101,7 @@ class HadithService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt("bukhari_range_start", newStart);
-    } catch (e) {
-
-    }
+    } catch (e) {}
 
     await loadHadiths(newStart, newEnd, setLoading, refreshUI);
   }
@@ -132,22 +129,22 @@ class HadithService {
 
     final String shareText = isEnglish
         ? '''
-Hadith #${hadith.number} - Sahih al-Bukhari
+-Hadith #${hadith.number} - Sahih al-Bukhari
 
 ${hadith.arab}
 
 ${hadith.id}$reference
 
-Shared via Islamic App
+Shared via Siraj - سِرَاچ
+Download the app: https://play.google.com/store/apps/details?id=com.youssef.islamic_app
 '''
         : '''
 حديث رقم $hadithNumber - صحيح البخاري
 
 ${hadith.arab}
 
-${hadith.id}$reference
-
-تمت المشاركة عبر تطبيق إسلامي
+- مشاركة من Siraj - سِرَاچ
+حمل التطبيق: https://play.google.com/store/apps/details?id=com.youssef.islamic_app
 ''';
 
     Share.share(

@@ -9,27 +9,34 @@ import 'dart:ui' as ui;
 class PrayerTimeTileWidget extends StatelessWidget {
   final String prayerName;
   final String prayerTime;
+  final bool? isChecked;
+  final ValueChanged<bool>? onCheckedChanged;
 
   const PrayerTimeTileWidget({
     Key? key,
     required this.prayerName,
     required this.prayerTime,
+    this.isChecked,
+    this.onCheckedChanged,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isCurrentPrayer = prayerName == Globals.nextPrayer;
-    final convertedTime =
-        PrayerTimesService.convertTo12HourFormat(prayerTime);
+    final convertedTime = PrayerTimesService.convertTo12HourFormat(prayerTime);
     final displayTime = Globals.languageState!
         ? convertedTime
         : Globals.toArabicNumber(convertedTime);
     final arabicName = PrayerTimesService.getArabicPrayerName(prayerName);
 
+    final showChecklist = isChecked != null && onCheckedChanged != null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isCurrentPrayer ? primaryColor.withOpacity(0.05) : Colors.transparent,
+        color: isCurrentPrayer
+            ? primaryColor.withOpacity(0.05)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isCurrentPrayer ? primaryColor : Colors.grey.shade200,
@@ -105,6 +112,22 @@ class PrayerTimeTileWidget extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                if (showChecklist) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => onCheckedChanged!(!isChecked!),
+                    icon: Icon(
+                      isChecked!
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: isChecked! ? Colors.green : Colors.grey.shade500,
+                    ),
+                    tooltip: Globals.languageState!
+                        ? (isChecked! ? 'Marked as prayed' : 'Mark as prayed')
+                        : (isChecked! ? 'تمت الصلاة' : 'تحديد كمصلي'),
+                  ),
+                ],
 
                 // Current Prayer Indicator
                 if (isCurrentPrayer)

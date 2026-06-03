@@ -1,24 +1,28 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'package:islamic_app/widgets/app_them.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../globals.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:islamic_app/globals.dart';
+import 'package:islamic_app/services/app_logger.dart';
+import 'package:islamic_app/widgets/app_them.dart';
 
 class MoreService {
   /// Launches an external URL using the provided [url].
   /// Shows a snackbar if launching fails.
-  static Future<void> launchExternalUrl(BuildContext context, String url) async {
+  static Future<void> launchExternalUrl(
+      BuildContext context, String url) async {
     try {
       final Uri uri = Uri.parse(url);
       print('🔗 Launching URI: $uri');
 
       // 🔸 Add this check before trying to launch
       if (uri.scheme == 'mailto') {
-        _showSnackBar(context, Globals.languageState!
-            ? "Email links require an email app."
-            : "روابط البريد تتطلب تطبيق بريد إلكتروني.");
+        _showSnackBar(
+            context,
+            Globals.languageState!
+                ? "Email links require an email app."
+                : "روابط البريد تتطلب تطبيق بريد إلكتروني.");
         return;
       }
 
@@ -37,9 +41,6 @@ class MoreService {
     }
   }
 
-
-
-
   /// Updates the app language preference
   static Future<void> setLanguage(bool isEnglish) async {
     try {
@@ -48,7 +49,8 @@ class MoreService {
       Globals.languageState = isEnglish;
       Globals.selectedLanguage = isEnglish ? "English" : "العربية";
     } catch (e) {
-      debugPrint("❌ Error setting language preference: $e");
+      AppLogger.log("❌ Error setting language preference: $e",
+          name: "MoreServices");
     }
   }
 

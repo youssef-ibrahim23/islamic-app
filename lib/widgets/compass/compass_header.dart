@@ -16,19 +16,15 @@ class CompassHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: isPortrait ? 120 : 150,
+      height: isPortrait ? 240 : 150,
+      padding: const EdgeInsets.only(top: 40 ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: LinearGradient(colors: [
+          Colors.black.withOpacity(0.8),
+          Colors.white.withOpacity(0.1)
+        ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withOpacity(0.6),
-            Colors.transparent,
-          ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
         ),
       ),
       child: Column(

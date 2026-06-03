@@ -8,6 +8,7 @@ import 'package:islamic_app/widgets/more/language_drop_down.dart';
 import 'package:islamic_app/widgets/more/setting_card.dart';
 import 'package:islamic_app/widgets/more/setting_item.dart';
 import 'package:islamic_app/widgets/more/social_media_linkes.dart';
+import 'package:share_plus/share_plus.dart';
 
 class More extends StatefulWidget {
   const More({super.key});
@@ -26,6 +27,7 @@ class _MoreState extends State<More> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       body: Container(
+        height: size.height,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -48,7 +50,7 @@ class _MoreState extends State<More> {
               // Header with gradient overlay
               Container(
                 width: double.infinity,
-                height: isPortrait ? size.height * 0.25 : size.height * 0.35,
+                height: isPortrait ? size.height * 0.23 : size.height * 0.35,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -135,12 +137,27 @@ class _MoreState extends State<More> {
                             begin: 0.2,
                             curve: Curves.easeOutQuad,
                           ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 30),
                       SettingCardWidget(
                         title: isEnglish ? 'Connect with us' : 'تواصل معنا',
                         icon: Icons.contact_support_rounded,
                         size: size,
                         isPortrait: isPortrait,
+                        trailing: IconButton(
+                          icon: Icon(
+                            Icons.share,
+                            color: primaryColor,
+                            size: isPortrait ? 24 : 20,
+                          ),
+                          onPressed: () {
+                            final shareText = isEnglish
+                                ? 'Check out Siraj - سِرَاچ app!\n\nDownload the app: https://play.google.com/store/apps/details?id=com.youssef.islamic_app'
+                                : 'جرب تطبيق Siraj - سِرَاچ!\n\nحمل التطبيق: https://play.google.com/store/apps/details?id=com.youssef.islamic_app';
+                            Share.share(shareText,
+                                subject:
+                                    isEnglish ? 'Siraj App' : 'تطبيق سِرَاچ');
+                          },
+                        ),
                         children: [
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -166,7 +183,7 @@ class _MoreState extends State<More> {
                             begin: 0.2,
                             curve: Curves.easeOutQuad,
                           ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 30),
                       SettingCardWidget(
                         title: isEnglish ? 'About' : 'حول التطبيق',
                         icon: Icons.info_outline_rounded,
@@ -187,7 +204,7 @@ class _MoreState extends State<More> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                "1.0.0",
+                                "1.0.1",
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,

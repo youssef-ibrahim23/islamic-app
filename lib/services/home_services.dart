@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:islamic_app/globals.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,9 +45,15 @@ class HomeServices {
     try {
       // Return cached daily ayah if already loaded during splash
       if (Globals.dailyAyatAr != null || Globals.dailyAyatEn != null) {
+        // Get chapter names to provide both language options
+        final chapterNames = await _loadChapterNameCache();
+        final found = chapterNames[Globals.surahId ?? 1];
+
         return {
           'id': Globals.surahId ?? 1,
           'name': Globals.currentSora,
+          'nameEn': found?['en'] ?? Globals.currentSora,
+          'nameAr': found?['ar'] ?? Globals.currentSora,
           'ayatAr': Globals.dailyAyatAr,
           'ayatEn': Globals.dailyAyatEn,
           'translationName': Globals.dailyTranslationName,
@@ -78,10 +85,18 @@ class HomeServices {
 
         if (verses.isNotEmpty) {
           final now = DateTime.now();
+          // Create a proper seed based on date for true randomness but same result for same day
           final int dateSeed = now.year * 10000 + now.month * 100 + now.day;
-          final int index = dateSeed % verses.length;
-          final Map<String, dynamic> selected =
-              Map<String, dynamic>.from(verses[index]);
+          final Random random = Random(dateSeed);
+
+          // Shuffle the verses randomly using the date-based seed
+          final List<Map<String, dynamic>> shuffledVerses =
+              List<Map<String, dynamic>>.from(
+                  verses.cast<Map<String, dynamic>>());
+          shuffledVerses.shuffle(random);
+
+          // Pick the first verse from the shuffled list
+          final Map<String, dynamic> selected = shuffledVerses.first;
 
           final String ayatAr =
               (selected['text_uthmani'] ?? '').toString().trim();
@@ -110,6 +125,10 @@ class HomeServices {
             }
           }
 
+          // Get chapter names again for the return data
+          final chapterNames = await _loadChapterNameCache();
+          final found = chapterNames[verseSurahId];
+
           // Cache into Globals so other parts of the app can use it immediately
           Globals.dailyAyatAr = ayatAr;
           Globals.dailyAyatEn = null;
@@ -122,9 +141,11 @@ class HomeServices {
           return {
             'id': resolvedSurahId,
             'name': resolvedSurahName,
+            'nameEn': found?['en'] ?? resolvedSurahName,
+            'nameAr': found?['ar'] ?? resolvedSurahName,
             'ayatAr': ayatAr,
             'ayatEn': null,
-            'translationName': null,
+            'translationName': resolvedSurahName,
             'verseNumber': verseNumber,
             'verseKey': verseKey,
           };

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.developer.islamic_app">
+    package="com.youssef.islamic_app">
 
     <!-- ✅ Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
     <!-- ✅ For Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -23,11 +24,12 @@
 
     <application
         android:name="${applicationName}"
-        android:label="Islamic App"
+        android:label="Siraj - سِرَاچ"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/LaunchTheme"
         android:allowBackup="true"
         android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true"
         tools:targetApi="33">
 
         <activity
@@ -49,7 +51,31 @@
             </intent-filter>
         </activity>
 
-        <!-- ✅ Flutter Local Notifications: Boot Receiver -->
+        <!-- Custom Boot and Timezone Receivers -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Auto-Schedule Receiver -->
+        <receiver
+            android:name=".AutoScheduleReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.youssef.islamic_app.AUTO_SCHEDULE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Flutter Local Notifications: Boot Receiver -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
             android:exported="false"
@@ -60,12 +86,12 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ Flutter Local Notifications: Scheduled Receiver -->
+        <!-- Flutter Local Notifications: Scheduled Receiver -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />
 
-        <!-- ✅ Flutter Local Notifications: Foreground Service (for action buttons / background use) -->
+        <!-- ✅ Flutter Local Notifications: Foreground Service -->
         <service
             android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
             android:exported="false"
@@ -75,5 +101,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
     </application>
 </manifest>

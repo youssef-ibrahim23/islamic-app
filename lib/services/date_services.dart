@@ -59,15 +59,53 @@ class DateService {
     }
   }
 
-  /// Returns the current Hijri date formatted based on selected language.
+  /// Returns the current Hijri date formatted based on selected language with device location adjustment.
   static String getCurrentHijriDate() {
     HijriCalendar.setLocal(Globals.languageState == true ? "en" : "ar");
-    return HijriCalendar.fromDate(DateTime.now()).toFormat("dd MMMM yyyy");
+    final adjustment = Globals.totalHijriAdjustment;
+
+    // Add +1 to fix library's astronomical calculation lag
+    final totalAdjustment = adjustment + 1;
+
+    // Always apply adjustment (even if 0, to ensure consistent behavior)
+    final adjustedDate = DateTime.now().add(Duration(days: totalAdjustment));
+    final result =
+        HijriCalendar.fromDate(adjustedDate).toFormat("dd MMMM yyyy");
+    return result;
+  }
+
+  /// Returns Hijri date for a specific Gregorian date with device location adjustment.
+  static String getHijriDateForDate(DateTime date) {
+    HijriCalendar.setLocal(Globals.languageState == true ? "en" : "ar");
+    final adjustment = Globals.totalHijriAdjustment;
+
+    // Add +1 to fix library's astronomical calculation lag
+    final totalAdjustment = adjustment + 1;
+
+    // Always apply adjustment (even if 0, to ensure consistent behavior)
+    final adjustedDate = date.add(Duration(days: totalAdjustment));
+    return HijriCalendar.fromDate(adjustedDate).toFormat("dd MMMM yyyy");
+  }
+
+  /// Returns Hijri day for a specific Gregorian date with regional adjustment.
+  static int getHijriDayForDate(DateTime date) {
+    HijriCalendar.setLocal(Globals.languageState == true ? "en" : "ar");
+    final adjustment = Globals.totalHijriAdjustment;
+
+    // Add +1 to fix library's astronomical calculation lag
+    final totalAdjustment = adjustment + 1;
+
+    // Always apply adjustment (even if 0, to ensure consistent behavior)
+    final adjustedDate = date.add(Duration(days: totalAdjustment));
+    return HijriCalendar.fromDate(adjustedDate).hDay;
   }
 
   /// Converts English digits to Arabic numerals.
   static String _toArabicNumber(String input) {
-    return input.split('').map((char) => _arabicNumerals[char] ?? char).join('');
+    return input
+        .split('')
+        .map((char) => _arabicNumerals[char] ?? char)
+        .join('');
   }
 
   /// Returns the name of the current day in selected language.

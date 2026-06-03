@@ -8,6 +8,7 @@ class SettingCardWidget extends StatelessWidget {
   final List<Widget> children;
   final Size size;
   final bool isPortrait;
+  final Widget? trailing;
 
   const SettingCardWidget({
     Key? key,
@@ -16,11 +17,13 @@ class SettingCardWidget extends StatelessWidget {
     required this.children,
     required this.size,
     required this.isPortrait,
+    this.trailing,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: const Color(0xFFF8F5EF),
       elevation: 6,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -28,7 +31,7 @@ class SettingCardWidget extends StatelessWidget {
       shadowColor: Colors.black.withOpacity(0.2),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: const Color(0xFFF8F5EF),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -54,16 +57,19 @@ class SettingCardWidget extends StatelessWidget {
                     child: Icon(icon, color: primaryColor, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: isPortrait ? 20 : 18,
-                      fontWeight: FontWeight.w600,
-                      fontFamily:
-                          Globals.languageState! ? 'Roboto' : 'Tajawal',
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: isPortrait ? 20 : 18,
+                        fontWeight: FontWeight.w600,
+                        fontFamily:
+                            Globals.languageState! ? 'Roboto' : 'Tajawal',
+                      ),
                     ),
                   ),
+                  if (trailing != null) trailing!,
                 ],
               ),
             ),

@@ -182,11 +182,15 @@ class _AzkarPageState extends State<AzkarPage> with TickerProviderStateMixin {
         }
 
         final data = snapshot.data!;
-        return TabBarView(
-          controller: _tabController,
-          children: azkarKeys.map((key) {
-            return AzkarList.buildAzkarList(key, data[key] ?? []);
-          }).toList(),
+
+        return Directionality(
+          textDirection: isEnglish ? TextDirection.ltr : TextDirection.rtl, // ← reverse scroll direction
+          child: TabBarView(
+            controller: _tabController,
+            children: azkarKeys.map((key) {
+              return AzkarList.buildAzkarList(key, data[key] ?? []);
+            }).toList(),
+          ),
         );
       },
     );

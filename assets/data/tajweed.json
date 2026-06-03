@@ -1,0 +1,144 @@
+{
+  "tajweed_marks": {
+    "waqf": [
+      {
+        "symbol": "م",
+        "name": "وقف لازم",
+        "description": "لازم تقف، الوصل يغيّر المعنى"
+      },
+      {
+        "symbol": "لا",
+        "name": "لا وقف",
+        "description": "ماينفعش تقف هنا"
+      },
+      {
+        "symbol": "ج",
+        "name": "وقف جائز",
+        "description": "ينفع تقف أو تكمل"
+      },
+      {
+        "symbol": "صلى",
+        "name": "الوصل أولى",
+        "description": "الأفضل تكمل"
+      },
+      {
+        "symbol": "قلى",
+        "name": "الوقف أولى",
+        "description": "الأفضل تقف"
+      },
+      {
+        "symbol": "قف",
+        "name": "قف",
+        "description": "الأفضل تقف هنا"
+      },
+      {
+        "symbol": "ك",
+        "name": "كذلك",
+        "description": "نفس حكم اللي قبله"
+      },
+      {
+        "symbol": "∴",
+        "name": "تعانق الوقف",
+        "description": "تختار واحدة من الاتنين، ما تقفش عليهم الاتنين"
+      }
+    ],
+    "tajweed": [
+      {
+        "symbol": "~",
+        "name": "مد",
+        "description": "إطالة الصوت"
+      },
+      {
+        "symbol": "ّ",
+        "name": "شدة",
+        "description": "تضعيف الحرف"
+      },
+      {
+        "symbol": "ْ",
+        "name": "سكون",
+        "description": "وقف خفيف بدون حركة"
+      },
+      {
+        "symbol": "ۢ",
+        "name": "غنة",
+        "description": "صوت أنفي"
+      },
+      {
+        "symbol": "ۭ",
+        "name": "إخفاء",
+        "description": "إخفاء النون أو التنوين"
+      },
+      {
+        "symbol": "ۚ",
+        "name": "وقف خفيف",
+        "description": "يجوز الوقف"
+      },
+      {
+        "symbol": "ۖ",
+        "name": "وقف خفيف",
+        "description": "يجوز الوقف"
+      },
+      {
+        "symbol": "ۗ",
+        "name": "وقف خفيف",
+        "description": "يجوز الوقف"
+      }
+    ],
+    "special": [
+      {
+        "symbol": "۞",
+        "name": "بداية حزب",
+        "description": "تقسيم في القرآن"
+      },
+      {
+        "symbol": "۩",
+        "name": "سجدة",
+        "description": "موضع سجود"
+      },
+      {
+        "symbol": "۝",
+        "name": "نهاية آية",
+        "description": "رقم الآية"
+      }
+    ],
+    "harakat": [
+      {
+        "symbol": "َ",
+        "name": "فتحة",
+        "description": "حركة فتح"
+      },
+      {
+        "symbol": "ُ",
+        "name": "ضمة",
+        "description": "حركة ضم"
+      },
+      {
+        "symbol": "ِ",
+        "name": "كسرة",
+        "description": "حركة كسر"
+      },
+      {
+        "symbol": "ً",
+        "name": "تنوين فتح",
+        "description": "نون ساكنة آخر الكلمة"
+      },
+      {
+        "symbol": "ٌ",
+        "name": "تنوين ضم",
+        "description": "نون ساكنة آخر الكلمة"
+      },
+      {
+        "symbol": "ٍ",
+        "name": "تنوين كسر",
+        "description": "نون ساكنة آخر الكلمة"
+      }
+    ],
+    "special_rules": [
+      {
+        "symbol": "مـ",
+        "name": "ميم الإقلاب",
+        "description": "تقلب النون أو التنوين إلى ميم مع غنة"
+      }
+    ]
+  }
+}

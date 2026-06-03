@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
-import 'package:islamic_app/services/calender_services.dart';
+import 'package:islamic_app/services/date_services.dart';
 
 Widget buildOutsideDay(
   BuildContext context,
@@ -9,15 +9,16 @@ Widget buildOutsideDay(
   Color textColor,
   Color hijriTextColor,
 ) {
-  final hijriDate = CalendarServices.gregorianToHijri(day);
-  final hijriDay = hijriDate.day.toString();
-  
+  final hijriDay = DateService.getHijriDayForDate(day);
+
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          isEnglish ?  day.day.toString() : Globals.toArabicNumber(day.day.toString()),
+          isEnglish
+              ? day.day.toString()
+              : Globals.toArabicNumber(day.day.toString()),
           style: TextStyle(
             color: Colors.grey[400],
             fontSize: 16,
@@ -25,7 +26,9 @@ Widget buildOutsideDay(
           ),
         ),
         Text(
-          isEnglish ? hijriDay.toString() : Globals.toArabicNumber(hijriDay.toString()),
+          isEnglish
+              ? hijriDay.toString()
+              : Globals.toArabicNumber(hijriDay.toString()),
           style: TextStyle(
             color: Colors.grey[400],
             fontSize: 10,

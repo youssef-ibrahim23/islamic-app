@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:islamic_app/globals.dart';
 import 'package:islamic_app/services/calender_services.dart';
-import 'package:hijri/hijri_calendar.dart';
+import 'package:islamic_app/services/date_services.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
 Widget buildDefaultDay(
-  BuildContext context, 
-  DateTime day, 
-  bool isEnglish, 
-  Color textColor, 
+  BuildContext context,
+  DateTime day,
+  bool isEnglish,
+  Color textColor,
   Color hijriTextColor,
 ) {
   CalendarServices.setHijriLocale(isEnglish);
-  final hijri = HijriCalendar.fromDate(day);
-  
+  final hijriDay = DateService.getHijriDayForDate(day);
+
   return Column(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       Text(
-        Globals.languageState! ? '${day.day}' : Globals.toArabicNumber('${day.day}'),
+        Globals.languageState!
+            ? '${day.day}'
+            : Globals.toArabicNumber('${day.day}'),
         style: TextStyle(
           fontSize: 16,
           color: textColor,
@@ -28,7 +30,9 @@ Widget buildDefaultDay(
       ),
       const SizedBox(height: 2),
       Text(
-        Globals.languageState! ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
+        Globals.languageState!
+            ? hijriDay.toString()
+            : Globals.toArabicNumber(hijriDay.toString()),
         style: TextStyle(
           fontSize: 12,
           color: hijriTextColor,
@@ -40,15 +44,15 @@ Widget buildDefaultDay(
 }
 
 Widget buildTodayDay(
-  BuildContext context, 
-  DateTime day, 
-  bool isEnglish, 
+  BuildContext context,
+  DateTime day,
+  bool isEnglish,
   Color primaryColor,
   double cellSize,
 ) {
   CalendarServices.setHijriLocale(isEnglish);
-  final hijri = HijriCalendar.fromDate(day);
-  
+  final hijriDay = DateService.getHijriDayForDate(day);
+
   return Container(
     width: cellSize,
     height: cellSize,
@@ -72,7 +76,9 @@ Widget buildTodayDay(
         ),
         const SizedBox(height: 2),
         Text(
-          isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
+          isEnglish
+              ? hijriDay.toString()
+              : Globals.toArabicNumber(hijriDay.toString()),
           style: TextStyle(
             fontSize: 12,
             color: primaryColor,
@@ -85,14 +91,14 @@ Widget buildTodayDay(
 }
 
 Widget buildSelectedDay(
-  BuildContext context, 
-  DateTime day, 
-  bool isEnglish, 
+  BuildContext context,
+  DateTime day,
+  bool isEnglish,
   double cellSize,
 ) {
   CalendarServices.setHijriLocale(isEnglish);
-  final hijri = HijriCalendar.fromDate(day);
-  
+  final hijriDay = DateService.getHijriDayForDate(day);
+
   return Container(
     width: cellSize,
     height: cellSize,
@@ -114,7 +120,9 @@ Widget buildSelectedDay(
         ),
         const SizedBox(height: 2),
         Text(
-          isEnglish ? hijri.hDay.toString() : Globals.toArabicNumber(hijri.hDay.toString()),
+          isEnglish
+              ? hijriDay.toString()
+              : Globals.toArabicNumber(hijriDay.toString()),
           style: TextStyle(
             fontSize: 12,
             color: Colors.white.withOpacity(0.9),

@@ -11,12 +11,12 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.developer.islamic_app"
+    namespace = "com.youssef.islamic_app"
     compileSdk = 35
     ndkVersion "27.0.12077973"
 
     defaultConfig {
-        applicationId "com.developer.islamic_app"
+        applicationId "com.youssef.islamic_app"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 35
         versionCode flutter.versionCode
@@ -41,21 +41,21 @@ android {
 
     buildTypes {
         release {
+            minifyEnabled false
+            shrinkResources false
+            //proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
-            shrinkResources true
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
         coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 
@@ -64,6 +64,6 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.0"
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }
+

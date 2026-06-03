@@ -1,0 +1,46 @@
+com.developer.islamic_app-jetified-core-ktx-1.13.1-0 C:\Users\NTG\.gradle\caches\8.9\transforms\0071983c2857312738217ad49f714d44\transformed\jetified-core-ktx-1.13.1\res
+com.developer.islamic_app-jetified-lifecycle-viewmodel-savedstate-2.7.0-1 C:\Users\NTG\.gradle\caches\8.9\transforms\03aa538956f8035119de97d4dd90817f\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\res
+com.developer.islamic_app-jetified-profileinstaller-1.3.1-2 C:\Users\NTG\.gradle\caches\8.9\transforms\3a76db54e34354a4808e55ed58481206\transformed\jetified-profileinstaller-1.3.1\res
+com.developer.islamic_app-lifecycle-livedata-2.7.0-3 C:\Users\NTG\.gradle\caches\8.9\transforms\41aa74906ec459dc794dac3518c7ae3d\transformed\lifecycle-livedata-2.7.0\res
+com.developer.islamic_app-jetified-window-java-1.2.0-4 C:\Users\NTG\.gradle\caches\8.9\transforms\4469208c1b82410145c5c0f36f8a97bb\transformed\jetified-window-java-1.2.0\res
+com.developer.islamic_app-jetified-savedstate-1.2.1-5 C:\Users\NTG\.gradle\caches\8.9\transforms\47f7e0e28ddc28af54115840f0e1001c\transformed\jetified-savedstate-1.2.1\res
+com.developer.islamic_app-fragment-1.7.1-6 C:\Users\NTG\.gradle\caches\8.9\transforms\5235b28fc105659d705058db8a4eb0ff\transformed\fragment-1.7.1\res
+com.developer.islamic_app-jetified-activity-1.8.1-7 C:\Users\NTG\.gradle\caches\8.9\transforms\527a7a6bfdb20d44e2c596b7771653d5\transformed\jetified-activity-1.8.1\res
+com.developer.islamic_app-jetified-window-1.2.0-8 C:\Users\NTG\.gradle\caches\8.9\transforms\5a5df0903a93559d7664efd0138d26fc\transformed\jetified-window-1.2.0\res
+com.developer.islamic_app-jetified-startup-runtime-1.1.1-9 C:\Users\NTG\.gradle\caches\8.9\transforms\6033aadc948601971906043780579ad0\transformed\jetified-startup-runtime-1.1.1\res
+com.developer.islamic_app-browser-1.8.0-10 C:\Users\NTG\.gradle\caches\8.9\transforms\67a2a5ec25e1f68c1269886f3308606a\transformed\browser-1.8.0\res
+com.developer.islamic_app-media-1.1.0-11 C:\Users\NTG\.gradle\caches\8.9\transforms\71c8dfa8977e053015c066124b97f4c7\transformed\media-1.1.0\res
+com.developer.islamic_app-jetified-annotation-experimental-1.4.0-12 C:\Users\NTG\.gradle\caches\8.9\transforms\76735ee515d73a284c00aa7748ba8ab6\transformed\jetified-annotation-experimental-1.4.0\res
+com.developer.islamic_app-lifecycle-livedata-core-2.7.0-13 C:\Users\NTG\.gradle\caches\8.9\transforms\7ff2821e622b9d230603c622db50340c\transformed\lifecycle-livedata-core-2.7.0\res
+com.developer.islamic_app-jetified-lifecycle-process-2.7.0-14 C:\Users\NTG\.gradle\caches\8.9\transforms\8a23aae775ae701a05d8396cd81cb897\transformed\jetified-lifecycle-process-2.7.0\res
+com.developer.islamic_app-jetified-core-1.0.0-15 C:\Users\NTG\.gradle\caches\8.9\transforms\8b34818aa23d2f5a67157f6797bef1f3\transformed\jetified-core-1.0.0\res
+com.developer.islamic_app-core-1.13.1-16 C:\Users\NTG\.gradle\caches\8.9\transforms\8dbde9271ddea75c005bf8d9f5848604\transformed\core-1.13.1\res
+com.developer.islamic_app-core-runtime-2.2.0-17 C:\Users\NTG\.gradle\caches\8.9\transforms\8f8e323d78614a07851abad1087f78ac\transformed\core-runtime-2.2.0\res
+com.developer.islamic_app-lifecycle-viewmodel-2.7.0-18 C:\Users\NTG\.gradle\caches\8.9\transforms\9a54bde7a9615acbc9b97dfc3552604c\transformed\lifecycle-viewmodel-2.7.0\res
+com.developer.islamic_app-jetified-play-services-base-18.3.0-19 C:\Users\NTG\.gradle\caches\8.9\transforms\9ea1056cb3706825cd782172f6cac13b\transformed\jetified-play-services-base-18.3.0\res
+com.developer.islamic_app-jetified-lifecycle-livedata-core-ktx-2.7.0-20 C:\Users\NTG\.gradle\caches\8.9\transforms\a3834e037c252e340be1b8226623df13\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\res
+com.developer.islamic_app-jetified-tracing-1.2.0-21 C:\Users\NTG\.gradle\caches\8.9\transforms\aab49239b021f9e7cd6d04bbfc2ff596\transformed\jetified-tracing-1.2.0\res
+com.developer.islamic_app-jetified-datastore-preferences-1.0.0-22 C:\Users\NTG\.gradle\caches\8.9\transforms\c7dbb35fff50cbc6c5785afead9dff70\transformed\jetified-datastore-preferences-1.0.0\res
+com.developer.islamic_app-jetified-datastore-1.0.0-23 C:\Users\NTG\.gradle\caches\8.9\transforms\ee2bff25cbd0433005e133debed5fb3a\transformed\jetified-datastore-1.0.0\res
+com.developer.islamic_app-lifecycle-runtime-2.7.0-24 C:\Users\NTG\.gradle\caches\8.9\transforms\f0eacaadbdf42ef4354fc76e9eb97219\transformed\lifecycle-runtime-2.7.0\res
+com.developer.islamic_app-jetified-play-services-basement-18.3.0-25 C:\Users\NTG\.gradle\caches\8.9\transforms\f83a610ecdace47adee7c7418a7f190c\transformed\jetified-play-services-basement-18.3.0\res
+com.developer.islamic_app-release-26 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\audioplayers_android-5.2.0\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-27 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_compass_v2-1.0.3\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-28 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_local_notifications-20.1.0\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-29 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_native_timezone-2.0.0\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-30 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_qiblah-3.1.0+1\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-31 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\geocoding_android-4.0.1\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-32 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\geolocator_android-4.6.1\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-33 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.10\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-34 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\permission_handler_android-12.0.13\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-35 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\rive_common-0.4.15\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-36 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\share_plus-11.0.0\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-37 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\shared_preferences_android-2.3.2\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-release-38 C:\Users\NTG\AppData\Local\Pub\Cache\hosted\pub.dev\url_launcher_android-6.3.9\android\build\intermediates\packaged_res\release\packageReleaseResources
+com.developer.islamic_app-pngs-39 D:\Jo0\My Projects Source Code\Islamic App\android\app\build\generated\res\pngs\release
+com.developer.islamic_app-resValues-40 D:\Jo0\My Projects Source Code\Islamic App\android\app\build\generated\res\resValues\release
+com.developer.islamic_app-packageReleaseResources-41 D:\Jo0\My Projects Source Code\Islamic App\android\app\build\intermediates\incremental\release\packageReleaseResources\merged.dir
+com.developer.islamic_app-packageReleaseResources-42 D:\Jo0\My Projects Source Code\Islamic App\android\app\build\intermediates\incremental\release\packageReleaseResources\stripped.dir
+com.developer.islamic_app-release-43 D:\Jo0\My Projects Source Code\Islamic App\android\app\build\intermediates\merged_res\release\mergeReleaseResources
+com.developer.islamic_app-main-44 D:\Jo0\My Projects Source Code\Islamic App\android\app\src\main\res
+com.developer.islamic_app-release-45 D:\Jo0\My Projects Source Code\Islamic App\android\app\src\release\res

@@ -75,11 +75,13 @@ class _HadithScreenState extends State<HadithScreen> {
       body: Directionality(
           textDirection: TextDirection.rtl,
           child: _buildBody(isEnglish, size, isPortrait)),
-      bottomNavigationBar: Directionality(
-        textDirection: TextDirection.rtl,
-        child: NavigationButtons(
-          isEnglish: isEnglish,
-          onHadithsLoaded: _refreshUI,
+      bottomNavigationBar: SafeArea(
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: NavigationButtons(
+            isEnglish: isEnglish,
+            onHadithsLoaded: _refreshUI,
+          ),
         ),
       ),
     );

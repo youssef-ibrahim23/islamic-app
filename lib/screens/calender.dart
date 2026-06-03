@@ -7,6 +7,7 @@ import 'package:islamic_app/widgets/calender/calender_header.dart';
 import 'package:islamic_app/widgets/calender/calender_widgets.dart';
 import 'package:islamic_app/widgets/calender/day_builders.dart';
 import 'package:islamic_app/widgets/calender/outside_day.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class EnhancedCalendar extends StatefulWidget {
@@ -26,6 +27,26 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
   void initState() {
     super.initState();
     CalendarServices.setHijriLocale(isEnglish);
+    _loadUserHijriAdjustment();
+  }
+
+  Future<void> _loadUserHijriAdjustment() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      Globals.userHijriAdjustment = prefs.getInt('user_hijri_adjustment') ?? 0;
+    });
+  }
+
+  Future<void> _saveUserHijriAdjustment() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('user_hijri_adjustment', Globals.userHijriAdjustment);
+  }
+
+  void _adjustHijriDate(int days) {
+    setState(() {
+      Globals.userHijriAdjustment += days;
+    });
+    _saveUserHijriAdjustment();
   }
 
   @override
@@ -74,9 +95,10 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                SizedBox(height: size.height * 0.07),
                 _buildCalendar(size, cellSize, weekdayNames),
-                SizedBox(height: size.height * 0.06),
+                SizedBox(height: size.height * 0.03),
+                _buildHijriAdjustmentControls(),
+                SizedBox(height: size.height * 0.03),
                 if (selectedDay != null)
                   SelectedDateCard(
                     selectedDay: selectedDay!,
@@ -209,5 +231,122 @@ class _EnhancedCalendarState extends State<EnhancedCalendar> {
         ),
       ),
     ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildHijriAdjustmentControls() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F5EF),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            isEnglish ? 'Hijri Date Adjustment' : 'تعديل التاريخ الهجري',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+              fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isEnglish
+                ? 'Adjust for moon sighting differences'
+                : 'ضبط وفقاً لرؤية الهلال',
+            style: TextStyle(
+              fontSize: 12,
+              color: textColor,
+              fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildAdjustmentButton(
+                icon: Icons.remove,
+                onPressed: () => _adjustHijriDate(-1),
+                label: isEnglish ? '-1 Day' : '-١ يوم',
+              ),
+              const SizedBox(width: 20),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: primaryColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  Globals.userHijriAdjustment == 0
+                      ? (isEnglish ? 'No Change' : 'لا تغيير')
+                      : '${Globals.userHijriAdjustment > 0 ? '+' : ''}${Globals.userHijriAdjustment} ${isEnglish ? 'days' : 'أيام'}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              _buildAdjustmentButton(
+                icon: Icons.add,
+                onPressed: () => _adjustHijriDate(1),
+                label: isEnglish ? '+1 Day' : '+١ يوم',
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2);
+  }
+
+  Widget _buildAdjustmentButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String label,
+  }) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: primaryColor,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: IconButton(
+            onPressed: onPressed,
+            icon: Icon(icon, color: Colors.white, size: 24),
+            padding: const EdgeInsets.all(12),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: textColor,
+            fontFamily: isEnglish ? 'Roboto' : 'Tajawal',
+          ),
+        ),
+      ],
+    );
   }
 }

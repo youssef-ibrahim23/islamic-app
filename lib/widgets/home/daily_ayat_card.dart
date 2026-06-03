@@ -4,6 +4,8 @@ import 'package:islamic_app/screens/verses.dart';
 
 class DailyAyatCard extends StatelessWidget {
   final String currentSora;
+  final String? currentSoraEn;
+  final String? currentSoraAr;
   final int surahId;
   final Color accentColor;
   final Color cardColor;
@@ -17,6 +19,8 @@ class DailyAyatCard extends StatelessWidget {
   const DailyAyatCard({
     super.key,
     required this.currentSora,
+    this.currentSoraEn,
+    this.currentSoraAr,
     required this.surahId,
     required this.accentColor,
     required this.cardColor,
@@ -37,13 +41,23 @@ class DailyAyatCard extends StatelessWidget {
     const secondaryColor = Color(0xFF8B0000);
     const backgroundColor = Color(0xFFF8F5EF);
 
+    // Determine the appropriate surah name based on current language
+    final displayName = isArabic
+        ? (currentSoraAr ?? currentSora)
+        : (currentSoraEn ?? currentSora);
+
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                SurahDetailPage(currentSora, surahId, currentSora),
+            builder: (context) => SurahDetailPage(
+              currentSoraEn ?? currentSora, // English name
+              surahId,
+              currentSoraAr ?? currentSora, // Arabic name
+              targetVerseNumber: verseNumber, // Scroll to this verse
+              openSource: 'daily_ayah', // Mark as opened from daily ayah
+            ),
           ),
         );
       },
@@ -137,7 +151,6 @@ class DailyAyatCard extends StatelessWidget {
                                 ],
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -156,31 +169,22 @@ class DailyAyatCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    isArabic ? ayatTextAr : ayatTextEn,
+                    ayatTextAr,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      wordSpacing: isArabic ? 5 : 2,
-                      fontSize: isArabic ? 20 : 16,
-                      color: isArabic ? primaryColor : Colors.grey[800],
-                      fontFamily: isArabic ? 'Kitab' : 'Roboto',
+                      wordSpacing: 5,
+                      fontSize: isArabic ? 20 : 18,
+                      color: primaryColor,
+                      fontFamily: 'Kitab',
                       height: 1.8,
-                      fontWeight: isArabic ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 5),
 
-                if (translationName != null && !isArabic)
-                  Text(
-                    "— $translationName",
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                // Removed translation name display to avoid duplicate surah name in English mode
 
                 const SizedBox(height: 16),
                 Align(
@@ -195,7 +199,14 @@ class DailyAyatCard extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) => SurahDetailPage(
-                                currentSora, surahId, currentSora),
+                              currentSoraEn ?? currentSora, // English name
+                              surahId,
+                              currentSoraAr ?? currentSora, // Arabic name
+                              targetVerseNumber:
+                                  verseNumber, // Scroll to this verse
+                              openSource:
+                                  'daily_ayah', // Mark as opened from daily ayah
+                            ),
                           ),
                         );
                       },
@@ -214,7 +225,7 @@ class DailyAyatCard extends StatelessWidget {
                                       color: primaryColor, size: 18),
                                   const SizedBox(width: 8),
                                   Text(
-                                    "سورة $currentSora",
+                                    "سورة $displayName",
                                     style: const TextStyle(
                                       color: primaryColor,
                                       fontFamily: 'Tajawal',
@@ -225,7 +236,7 @@ class DailyAyatCard extends StatelessWidget {
                                 ]
                               : [
                                   Text(
-                                    "Surah $currentSora",
+                                    "Surah $displayName",
                                     style: const TextStyle(
                                       color: primaryColor,
                                       fontFamily: 'Roboto',
@@ -242,8 +253,8 @@ class DailyAyatCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              
-              const SizedBox(height: 12),
+
+                const SizedBox(height: 12),
               ],
             ),
           ],

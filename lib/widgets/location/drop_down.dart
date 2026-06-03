@@ -4,7 +4,6 @@ import 'package:islamic_app/location.dart';
 import 'package:islamic_app/widgets/app_them.dart';
 
 class DropDown {
-
   static Widget buildCountryDropdown({
     required bool isEnglish,
     required String? selectedCountry,
@@ -45,14 +44,18 @@ class DropDown {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: primaryColor),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              items: Locations().arabCountries.keys.map((String country) {
+              items: Locations.arabCountriesEnglish.keys.map((String country) {
                 return DropdownMenuItem<String>(
                   value: country,
                   child: Text(
-                    country,
-                    style: GoogleFonts.getFont('Scheherazade New', fontSize: 16),
+                    isEnglish
+                        ? country
+                        : Locations.arabicCountryFromEnglish(country),
+                    style:
+                        GoogleFonts.getFont('Scheherazade New', fontSize: 16),
                   ),
                 );
               }).toList(),
@@ -74,7 +77,11 @@ class DropDown {
     required String? selectedGovernorate,
     required ValueChanged<String?> onChanged,
   }) {
-    final governorates = Locations().arabCountries[selectedCountry] ?? [];
+    final governoratesEnglish =
+        Locations.arabCountriesEnglish[selectedCountry] ?? <String>[];
+    final governoratesArabic = Locations.arabCountriesArabic[
+            Locations.arabicCountryFromEnglish(selectedCountry)] ??
+        <String>[];
 
     return Card(
       elevation: 4,
@@ -90,7 +97,9 @@ class DropDown {
                 const Icon(Icons.location_city, color: primaryColor),
                 const SizedBox(width: 8),
                 Text(
-                  isEnglish ? 'Select City/Governorate' : 'اختر المدينة / المحافظة',
+                  isEnglish
+                      ? 'Select City/Governorate'
+                      : 'اختر المدينة / المحافظة',
                   style: GoogleFonts.getFont(
                     'Scheherazade New',
                     fontSize: 18,
@@ -111,14 +120,22 @@ class DropDown {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: primaryColor),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-              items: governorates.map((String governorate) {
+              items: governoratesEnglish.map((String governorateEn) {
+                final int index = governoratesEnglish.indexOf(governorateEn);
+                final String display = (!isEnglish &&
+                        index >= 0 &&
+                        index < governoratesArabic.length)
+                    ? governoratesArabic[index]
+                    : governorateEn;
                 return DropdownMenuItem<String>(
-                  value: governorate,
+                  value: governorateEn,
                   child: Text(
-                    governorate,
-                    style: GoogleFonts.getFont('Scheherazade New', fontSize: 16),
+                    display,
+                    style:
+                        GoogleFonts.getFont('Scheherazade New', fontSize: 16),
                   ),
                 );
               }).toList(),
