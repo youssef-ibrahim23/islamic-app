@@ -43,12 +43,34 @@ Future<void> _initializeNotificationHandler() async {
   await notificationsPlugin.initialize(settings: settings);
 }
 
+class WebScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Widget buildViewportChrome(
+    BuildContext context,
+    Widget child,
+    AxisDirection axisDirection,
+  ) {
+    return child;
+  }
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    // Hide scrollbar on web platform
+    return child;
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scrollBehavior: WebScrollBehavior(),
       theme: ThemeData(
         splashFactory: InkRipple.splashFactory,
         fontFamily: 'Amiri',

@@ -74,7 +74,7 @@ class _CompassPageState extends State<CompassPage>
       // Check if compass sensor is available by trying to get Qiblah direction
       _qiblahSubscription = CompassService.qiblahStream.listen(
         (QiblahDirection direction) {
-          if (!_sensorChecked) {
+          if (!_sensorChecked && mounted) {
             setState(() {
               _compassSensorAvailable = true;
               _sensorChecked = true;
@@ -86,7 +86,7 @@ class _CompassPageState extends State<CompassPage>
           }
         },
         onError: (error) {
-          if (!_sensorChecked) {
+          if (!_sensorChecked && mounted) {
             setState(() {
               _compassSensorAvailable = false;
               _compassError = true;
@@ -105,13 +105,15 @@ class _CompassPageState extends State<CompassPage>
       // unavailable if the stream emits an actual error, not on timeout.
       // The calculating dialog will be dismissed when data arrives or on error.
     } catch (e) {
-      setState(() {
-        _compassSensorAvailable = false;
-        _compassError = true;
-        _sensorChecked = true;
-      });
-      // Hide calculating dialog on error
-      _hideCalculatingQiblaDialog();
+      if (mounted) {
+        setState(() {
+          _compassSensorAvailable = false;
+          _compassError = true;
+          _sensorChecked = true;
+        });
+        // Hide calculating dialog on error
+        _hideCalculatingQiblaDialog();
+      }
     }
   }
 
@@ -439,7 +441,7 @@ class _CompassPageState extends State<CompassPage>
 
     showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true, // Allow dismissing by tapping outside
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -602,6 +604,36 @@ class _CompassPageState extends State<CompassPage>
                                   curve: Curves.easeInOut),
                         ),
                       ).animate().fadeIn(delay: 500.ms, duration: 400.ms),
+
+                      const SizedBox(height: 16),
+
+                      // Cancel button
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: TextButton(
+                          onPressed: () {
+                            _cancelQiblaCalculation(dialogContext);
+                          },
+                          child: Text(
+                            isEnglish ? 'Cancel' : 'إلغاء',
+                            style: GoogleFonts.getFont(
+                              isEnglish ? 'Roboto' : 'Tajawal',
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -613,7 +645,13 @@ class _CompassPageState extends State<CompassPage>
               .fadeIn(duration: 500.ms),
         );
       },
-    );
+    ).then((_) {
+      // Handle dialog dismissal (either by cancel button or tapping outside)
+      // Only cancel if the dialog is still in calculating state (meaning it was dismissed by user, not by successful completion)
+      if (_isCalculatingQibla && mounted) {
+        _cancelQiblaCalculation(null);
+      }
+    });
   }
 
   void _hideCalculatingQiblaDialog() {
@@ -622,6 +660,27 @@ class _CompassPageState extends State<CompassPage>
       setState(() {
         _isCalculatingQibla = false;
       });
+    }
+  }
+
+  void _cancelQiblaCalculation(BuildContext? dialogContext) {
+    // Cancel the qiblah subscription
+    _qiblahSubscription?.cancel();
+    _qiblahSubscription = null;
+
+    // Update state to indicate cancellation
+    if (mounted) {
+      setState(() {
+        _isCalculatingQibla = false;
+        _sensorChecked = true;
+        _compassSensorAvailable = false;
+        _compassError = true; // Mark as error since we cancelled
+      });
+    }
+
+    // Close the dialog if context is provided
+    if (dialogContext != null) {
+      Navigator.pop(dialogContext);
     }
   }
 
